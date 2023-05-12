@@ -27,7 +27,7 @@ const MyChats = ({ fetchAgain }) => {
       };
 
       const { data } = await axios.get(
-        "http://localhost:5000/api/chat",
+        "https://vibechat-177v.onrender.com/api/chat",
         config
       );
       setChats(data);

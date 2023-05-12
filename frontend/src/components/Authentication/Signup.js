@@ -51,7 +51,7 @@ const Signup = () => {
         },
       };
       const { data } = await axios.post(
-        "http://localhost:5000/api/user",
+        "https://vibechat-177v.onrender.com/api/user",
         {
           name,
           email,

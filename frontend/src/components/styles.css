@@ -1,0 +1,14 @@
+.messages {
+  flex-direction: row;
+  overflow-y: scroll;
+  scrollbar-width: none;
+  /* background-color: aqua; */
+}
+
+.navbar{
+ display: flex;
+ justify-content: space-between;
+ background-color: white;
+ padding: 15px;
+ /* color: white; */
+}

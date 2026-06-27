@@ -1,32 +1,47 @@
-@import url("https://fonts.googleapis.com/css2?family=Work+Sans:wght@300&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Work+Sans:wght@300;400;600&display=swap");
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
 .App {
   min-height: 100vh;
   display: flex;
-  background-image: url("./background1.png");
-  background-position: center;
-  background-size: cover;
+  flex-direction: column;
+  font-family: "Work Sans", sans-serif;
 }
 
 ::-webkit-scrollbar {
-  width: 0px;
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(136, 136, 136, 0.281);
+  background: rgba(233, 69, 96, 0.5);
+  border-radius: 10px;
 }
 
-/* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #555;
+  background: #e94560;
 }
 
-.chatpageLayout{
+.chatpageLayout {
   display: flex;
   flex-wrap: wrap;
   align-self: center;
   justify-content: center;
   padding: 20px;
   height: 100vh;
-  /* border: red solid 5px; */
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  overflow-y: scroll;
+  scrollbar-width: none;
 }

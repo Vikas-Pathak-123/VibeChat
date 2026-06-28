@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { io, Socket } from "socket.io-client";
 import { Player } from "@lottiefiles/react-lottie-player";
-import { getSender, getSenderFull } from "../config/ChatLogics";
+import { getSenderFull } from "../config/ChatLogics";
 import { useChatState } from "../context/ChatProvider";
 import { API_BASE_URL, SOCKET_ENDPOINT } from "../constants/api.constants";
 import { Message } from "../types";
@@ -22,7 +22,7 @@ interface SingleChatProps {
   setFetchAgain: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Tracks chat outside React state to avoid stale closure in socket listener
+// Tracks selected chat outside React state to avoid stale closure in socket listener
 let selectedChatCompare: any;
 
 const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) => {
@@ -41,21 +41,21 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
   useEffect(() => {
     socketRef.current = io(SOCKET_ENDPOINT);
     socketRef.current.emit("setup", user);
-    socketRef.current.on("connected",    () => setSocketConnected(true));
-    socketRef.current.on("typing",       () => setIsTyping(true));
-    socketRef.current.on("stop typing",  () => setIsTyping(false));
+    socketRef.current.on("connected",   () => setSocketConnected(true));
+    socketRef.current.on("typing",      () => setIsTyping(true));
+    socketRef.current.on("stop typing", () => setIsTyping(false));
     return () => { socketRef.current?.disconnect(); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Fetch messages when chat changes ──────────────────────────────────────
+  // ── Fetch messages when selected chat changes ──────────────────────────────
   useEffect(() => {
     fetchMessages();
     selectedChatCompare = selectedChat;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedChat]);
 
-  // ── Incoming message listener ─────────────────────────────────────────────
+  // ── Incoming message listener ──────────────────────────────────────────────
   useEffect(() => {
     socketRef.current?.on("message recieved", (newMsg: Message) => {
       if (!selectedChatCompare || selectedChatCompare._id !== newMsg.chat._id) {
@@ -90,7 +90,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
     if (e.key !== "Enter" || !newMessage.trim()) return;
     socketRef.current?.emit("stop typing", selectedChat?._id);
     const content = newMessage.trim();
-    setNewMessage("");
+    setNewMessage(""); // clear before API call to prevent double send
     try {
       const { data } = await axios.post(
         `${API_BASE_URL}/api/message`,
@@ -121,17 +121,13 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
     }, 3000);
   };
 
-  // ── Empty state ───────────────────────────────────────────────────────────
+  // ── Empty state ────────────────────────────────────────────────────────────
   if (!selectedChat) {
     return (
       <Box
-        display="flex"
-        flexDir="column"
-        alignItems="center"
-        justifyContent="center"
-        h="100%"
-        gap={3}
-        bg="bg-app"
+        display="flex" flexDir="column"
+        alignItems="center" justifyContent="center"
+        h="100%" gap={3} bg="bg-app"
       >
         <Text fontSize="5xl">💬</Text>
         <Text color="text-secondary" fontSize="md" fontWeight="medium">
@@ -151,46 +147,34 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
   return (
     <Box display="flex" flexDir="column" w="100%" h="100%">
 
-      {/* ── Chat Header ──────────────────────────────────────────────────── */}
+      {/* ── Chat Header ─────────────────────────────────────────────────── */}
       <Box
-        display="flex"
-        alignItems="center"
-        justifyContent="space-between"
-        px={4}
-        py={3}
+        display="flex" alignItems="center" justifyContent="space-between"
+        px={4} py={3}
         bg="bg-surface"
-        borderBottom="1px solid"
-        borderColor="border-subtle"
+        borderBottom="1px solid" borderColor="border-subtle"
       >
         <Box display="flex" alignItems="center" gap={3}>
-          {/* Back button — mobile only */}
           <IconButton
             aria-label="Back"
             display={{ base: "flex", md: "none" }}
             icon={<ArrowBackIcon />}
-            variant="nav"
-            size="sm"
+            variant="nav" size="sm"
             onClick={() => setSelectedChat(null)}
           />
-
-          {/* Avatar + name */}
           <Avatar
             size="sm"
             name={selectedChat.isGroupChat ? selectedChat.chatName : chatPartner?.name}
-            src={chatPartner?.picture}
+            src={chatPartner?.picture ?? undefined}
             bg="accent"
           />
           <Box>
             <Text fontWeight="bold" color="text-primary" fontSize="md" lineHeight="1.2">
-              {selectedChat.isGroupChat
-                ? selectedChat.chatName
-                : chatPartner?.name}
+              {selectedChat.isGroupChat ? selectedChat.chatName : chatPartner?.name}
             </Text>
-            {/* Online status line — 1:1 chats only */}
-            {!selectedChat.isGroupChat && (
+            {!selectedChat.isGroupChat ? (
               <Text fontSize="11px" color="online" fontWeight="medium">● Online</Text>
-            )}
-            {selectedChat.isGroupChat && (
+            ) : (
               <Text fontSize="11px" color="text-secondary">
                 {selectedChat.users.length} members
               </Text>
@@ -198,7 +182,6 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
           </Box>
         </Box>
 
-        {/* Profile / group settings */}
         {selectedChat.isGroupChat
           ? <UpdateGroupChatModal
               fetchMessages={fetchMessages}
@@ -209,14 +192,15 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         }
       </Box>
 
-      {/* ── Messages Area ────────────────────────────────────────────────── */}
+      {/* ── Messages Area ───────────────────────────────────────────────── */}
       <Box flex="1" overflowY="hidden" px={2} py={2} bg="bg-app">
         {loading ? (
           <Box display="flex" h="100%" alignItems="center" justifyContent="center">
             <Spinner size="xl" color="accent" thickness="3px" />
           </Box>
         ) : (
-          <Box className="messages" h="100%" overflowY="auto"
+          <Box
+            className="messages" h="100%" overflowY="auto"
             sx={{
               "&::-webkit-scrollbar": { width: "3px" },
               "&::-webkit-scrollbar-thumb": { bg: "accent", borderRadius: "full" },
@@ -227,7 +211,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         )}
       </Box>
 
-      {/* ── Typing Indicator ─────────────────────────────────────────────── */}
+      {/* ── Typing Indicator ────────────────────────────────────────────── */}
       {isTyping && (
         <Box px={4} py={1}>
           <Player
@@ -238,14 +222,8 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         </Box>
       )}
 
-      {/* ── Message Input ────────────────────────────────────────────────── */}
-      <Box
-        px={4}
-        py={3}
-        bg="bg-surface"
-        borderTop="1px solid"
-        borderColor="border-subtle"
-      >
+      {/* ── Message Input ───────────────────────────────────────────────── */}
+      <Box px={4} py={3} bg="bg-surface" borderTop="1px solid" borderColor="border-subtle">
         <FormControl onKeyDown={sendMessage}>
           <InputGroup size="md">
             <Input
@@ -253,8 +231,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
               value={newMessage}
               onChange={typingHandler}
               bg="bg-input"
-              border="1px solid"
-              borderColor="border-subtle"
+              border="1px solid" borderColor="border-subtle"
               color="text-primary"
               borderRadius="full"
               pr="3rem"
@@ -266,8 +243,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
               <IconButton
                 aria-label="Attach file"
                 icon={<AttachmentIcon />}
-                size="sm"
-                variant="ghost"
+                size="sm" variant="ghost"
                 color="text-secondary"
                 borderRadius="full"
                 _hover={{ color: "accent" }}

@@ -1,0 +1,59 @@
+{
+  "extends": [
+    "react-app",
+    "react-app/jest"
+  ],
+  "rules": {
+    // ── TypeScript ──────────────────────────────────────────────────────────
+    // Warn on unused vars but allow underscore-prefixed to be ignored
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
+    // Allow explicit any in early development — revisit when stable
+    "@typescript-eslint/no-explicit-any": "warn",
+    // Enforce explicit return types on exported functions only
+    "@typescript-eslint/explicit-module-boundary-types": "off",
+
+    // ── React ───────────────────────────────────────────────────────────────
+    // Hooks rules — always errors
+    "react-hooks/rules-of-hooks": "error",
+    // Exhaustive deps — warn instead of error (we handle some cases manually)
+    "react-hooks/exhaustive-deps": "warn",
+    // No need to import React in scope with React 17+ JSX transform
+    "react/react-in-jsx-scope": "off",
+    // Prop types not needed — we use TypeScript interfaces
+    "react/prop-types": "off",
+
+    // ── General code quality ────────────────────────────────────────────────
+    // No console.log in production code
+    "no-console": ["warn", { "allow": ["warn", "error"] }],
+    // Prefer const
+    "prefer-const": "error",
+    // No var
+    "no-var": "error",
+    // Consistent use of === over ==
+    "eqeqeq": ["error", "always"],
+    // No duplicate imports
+    "no-duplicate-imports": "error",
+
+    // ── CI Safety ───────────────────────────────────────────────────────────
+    // These are OFF to prevent CI failures on warnings
+    // Turn them to "error" when the codebase is more mature
+    "no-unused-expressions": "warn"
+  },
+  "overrides": [
+    {
+      // Relax rules in test files
+      "files": ["**/*.test.ts", "**/*.test.tsx", "**/*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "off",
+        "no-console": "off"
+      }
+    }
+  ]
+}

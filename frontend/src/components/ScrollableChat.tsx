@@ -1,8 +1,13 @@
 import { Avatar } from "@chakra-ui/avatar";
 import { Tooltip } from "@chakra-ui/tooltip";
-import { Box } from "@chakra-ui/react";
+import { Box, Text } from "@chakra-ui/react";
 import ScrollableFeed from "react-scrollable-feed";
-import { isLastMessage, isSameSender, isSameSenderMargin, isSameUser } from "../config/ChatLogics";
+import {
+  isLastMessage,
+  isSameSender,
+  isSameSenderMargin,
+  isSameUser,
+} from "../config/ChatLogics";
 import { useChatState } from "../context/ChatProvider";
 import { Message } from "../types";
 
@@ -17,45 +22,97 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages }) => {
 
   return (
     <ScrollableFeed>
-      {messages.map((m, i) => (
-        <Box key={m._id} display="flex" alignItems="flex-end" mb={isSameUser(messages, m, i) ? 1 : 2}>
-          {/* Show avatar for received messages */}
-          {(isSameSender(messages, m, i, user._id) || isLastMessage(messages, i, user._id)) ? (
-            <Tooltip label={m.sender.name} placement="bottom-start" hasArrow>
-              <Avatar
-                mt="7px" mr={1} size="xs"
-                cursor="pointer"
-                name={m.sender.name}
-                src={m.sender.picture}
-              />
-            </Tooltip>
-          ) : (
-            <Box w="26px" mr={1} flexShrink={0} />
-          )}
+      {messages.map((m, i) => {
+        const isSent     = m.sender._id === user._id;
+        const showAvatar = isSameSender(messages, m, i, user._id) || isLastMessage(messages, i, user._id);
+        const sameUser   = isSameUser(messages, m, i);
+        const margin     = isSameSenderMargin(messages, m, i, user._id);
 
-          {/* Message bubble */}
+        // Format timestamp — e.g. "14:32"
+        const time = new Date(m.createdAt).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+        return (
           <Box
-            bg={m.sender._id === user._id ? "bubble-sent" : "bubble-received"}
-            color="text-primary"
-            ml={isSameSenderMargin(messages, m, i, user._id)}
-            mt={isSameUser(messages, m, i) ? "3px" : "10px"}
-            borderRadius={
-              m.sender._id === user._id
-                ? "18px 18px 4px 18px"
-                : "18px 18px 18px 4px"
-            }
-            px={4}
-            py={2}
-            maxW="75%"
-            fontSize="sm"
-            border="1px solid"
-            borderColor="border-subtle"
-            wordBreak="break-word"
+            key={m._id}
+            display="flex"
+            alignItems="flex-end"
+            justifyContent={isSent ? "flex-end" : "flex-start"}
+            mb={sameUser ? "2px" : "6px"}
+            px={2}
           >
-            {m.content}
+            {/* Avatar — only on received messages */}
+            {!isSent && (
+              showAvatar ? (
+                <Tooltip label={m.sender.name} placement="bottom-start" hasArrow>
+                  <Avatar
+                    mt="4px" mr={2}
+                    size="xs"
+                    cursor="pointer"
+                    name={m.sender.name}
+                    src={m.sender.picture}
+                    flexShrink={0}
+                  />
+                </Tooltip>
+              ) : (
+                <Box w="24px" mr={2} flexShrink={0} />
+              )
+            )}
+
+            {/* Bubble + timestamp */}
+            <Box
+              display="flex"
+              flexDir="column"
+              alignItems={isSent ? "flex-end" : "flex-start"}
+              maxW="70%"
+              ml={typeof margin === "number" ? `${margin}px` : margin}
+              mt={sameUser ? "2px" : "8px"}
+            >
+              {/* Sender name — only for group chats on first of group */}
+              {!isSent && !sameUser && (
+                <Text fontSize="10px" color="text-secondary" mb="2px" ml={1} fontWeight="semibold">
+                  {m.sender.name.split(" ")[0]}
+                </Text>
+              )}
+
+              {/* Message bubble */}
+              <Box
+                bg={isSent ? "accent" : "bg-elevated"}
+                color={isSent ? "white" : "text-primary"}
+                px={4}
+                py={2}
+                borderRadius={
+                  isSent
+                    ? sameUser ? "18px 18px 4px 18px" : "18px 18px 4px 18px"
+                    : sameUser ? "18px 18px 18px 4px" : "18px 18px 18px 4px"
+                }
+                fontSize="sm"
+                lineHeight="1.5"
+                wordBreak="break-word"
+                boxShadow={isSent
+                  ? "0 1px 8px rgba(225,48,108,0.25)"
+                  : "0 1px 4px rgba(0,0,0,0.12)"
+                }
+                position="relative"
+              >
+                {m.content}
+              </Box>
+
+              {/* Timestamp */}
+              <Text
+                fontSize="10px"
+                color="text-disabled"
+                mt="2px"
+                mx={1}
+              >
+                {time}
+              </Text>
+            </Box>
           </Box>
-        </Box>
-      ))}
+        );
+      })}
     </ScrollableFeed>
   );
 };

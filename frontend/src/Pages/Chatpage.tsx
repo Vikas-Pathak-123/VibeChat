@@ -9,7 +9,7 @@ const Chatpage: React.FC = () => {
   const [fetchAgain, setFetchAgain] = useState<boolean>(false);
   const { user, isAuthLoading } = useChatState();
 
-  // Wait until auth state is resolved from localStorage
+  // Wait until auth resolves from localStorage — prevents blank screen after login
   if (isAuthLoading) {
     return (
       <Center minH="100vh" bg="bg-app">

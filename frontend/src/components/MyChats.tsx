@@ -17,7 +17,7 @@ interface MyChatsProps {
 }
 
 const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
-  const [loggedUser, setLoggedUser] = useState<User | null>(null);
+  const [loggedUser, setLoggedUser]   = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { selectedChat, setSelectedChat, user, chats, setChats } = useChatState();
   const toast = useToast();
@@ -29,7 +29,13 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
       });
       setChats(data);
     } catch {
-      toast({ title: "Failed to load chats", status: "error", duration: 5000, isClosable: true, position: "bottom-left" });
+      toast({
+        title: "Failed to load chats",
+        status: "error",
+        duration: 5000,
+        isClosable: true,
+        position: "bottom-left",
+      });
     }
   };
 
@@ -41,7 +47,9 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
   }, [fetchAgain]);
 
   const filteredChats = chats.filter((chat) => {
-    const name = chat.isGroupChat ? chat.chatName : getSender(loggedUser!, chat.users);
+    const name = chat.isGroupChat
+      ? chat.chatName
+      : getSender(loggedUser!, chat.users);
     return name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -52,23 +60,35 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
       w={{ base: "100%", md: "31%" }}
       bg="bg-surface"
       borderRadius="xl"
-      border="1px solid" borderColor="border-subtle"
+      border="1px solid"
+      borderColor="border-subtle"
       overflow="hidden"
     >
-      {/* Header */}
-      <Box px={4} py={3} borderBottom="1px solid" borderColor="border-subtle"
-        display="flex" justifyContent="space-between" alignItems="center">
-        <Text fontSize="lg" fontWeight="bold" color="text-primary">💬 Chats</Text>
+      {/* ── Header ───────────────────────────────────────────── */}
+      <Box
+        px={4} py={3}
+        borderBottom="1px solid" borderColor="border-subtle"
+        display="flex" justifyContent="space-between" alignItems="center"
+      >
+        <Text fontSize="lg" fontWeight="bold" color="text-primary">
+          💬 Chats
+        </Text>
         <GroupChatModal>
           <Tooltip label="New Group Chat" hasArrow placement="bottom-end">
-            <Button size="sm" variant="primary" leftIcon={<AddIcon fontSize="10px" />}>
-              <Text display={{ base: "none", md: "flex" }} fontSize="xs">New Group</Text>
+            <Button
+              size="sm"
+              variant="primary"
+              leftIcon={<AddIcon fontSize="10px" />}
+            >
+              <Text display={{ base: "none", md: "flex" }} fontSize="xs">
+                New Group
+              </Text>
             </Button>
           </Tooltip>
         </GroupChatModal>
       </Box>
 
-      {/* Search */}
+      {/* ── Search ───────────────────────────────────────────── */}
       <Box px={3} py={3} borderBottom="1px solid" borderColor="border-subtle">
         <InputGroup size="sm">
           <InputLeftElement pointerEvents="none">
@@ -78,16 +98,24 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
             placeholder="Search conversations..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            bg="bg-input" border="1px solid" borderColor="border-subtle"
-            color="text-primary" borderRadius="full" fontSize="sm"
+            bg="bg-input"
+            border="1px solid"
+            borderColor="border-subtle"
+            color="text-primary"
+            borderRadius="full"
+            fontSize="sm"
             _placeholder={{ color: "text-disabled" }}
             _focus={{ borderColor: "accent", boxShadow: "0 0 0 1px #E1306C" }}
           />
         </InputGroup>
       </Box>
 
-      {/* Chat List */}
-      <Box flex="1" overflowY="auto" px={2} py={2}
+      {/* ── Chat List ─────────────────────────────────────────── */}
+      <Box
+        flex="1"
+        overflowY="auto"
+        px={2}
+        py={2}
         sx={{
           "&::-webkit-scrollbar": { width: "3px" },
           "&::-webkit-scrollbar-thumb": { bg: "accent", borderRadius: "full" },
@@ -101,8 +129,11 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
               </Text>
             )}
             {filteredChats.map((chat) => {
-              const chatName = chat.isGroupChat ? chat.chatName : getSender(loggedUser!, chat.users);
+              const chatName = chat.isGroupChat
+                ? chat.chatName
+                : getSender(loggedUser!, chat.users);
               const isSelected = selectedChat?._id === chat._id;
+
               return (
                 <Box
                   key={chat._id}
@@ -111,7 +142,8 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
                   display="flex"
                   alignItems="center"
                   gap={3}
-                  px={3} py={2}
+                  px={3}
+                  py={2}
                   borderRadius="10px"
                   bg={isSelected ? "bg-elevated" : "transparent"}
                   border="1px solid"
@@ -119,33 +151,61 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
                   _hover={{ bg: "bg-elevated", borderColor: "border-subtle" }}
                   transition="all 0.15s"
                 >
+                  {/* Avatar + online dot */}
                   <Box position="relative" flexShrink={0}>
-                    <Avatar size="sm" name={chatName} bg="accent" color="white" fontSize="xs" />
+                    <Avatar
+                      size="sm"
+                      name={chatName}
+                      bg="accent"
+                      color="white"
+                      fontSize="xs"
+                    />
                     {!chat.isGroupChat && (
-                      <Box position="absolute" bottom="0" right="0"
-                        w="9px" h="9px" bg="online"
-                        borderRadius="full" border="2px solid" borderColor="bg-surface"
+                      <Box
+                        position="absolute" bottom="0" right="0"
+                        w="9px" h="9px"
+                        bg="online"
+                        borderRadius="full"
+                        border="2px solid"
+                        borderColor="bg-surface"
                       />
                     )}
                   </Box>
+
+                  {/* Name + last message */}
                   <Box flex="1" overflow="hidden">
                     <Box display="flex" justifyContent="space-between" alignItems="center">
-                      <Text fontWeight="semibold" color="text-primary" fontSize="sm" isTruncated maxW="140px">
+                      <Text
+                        fontWeight="semibold"
+                        color="text-primary"
+                        fontSize="sm"
+                        isTruncated
+                        maxW="140px"
+                      >
                         {chatName}
                       </Text>
                       {chat.isGroupChat && (
-                        <Badge colorScheme="pink" fontSize="9px" px={1} borderRadius="md">Group</Badge>
+                        <Badge colorScheme="pink" fontSize="9px" px={1} borderRadius="md">
+                          Group
+                        </Badge>
                       )}
                     </Box>
                     {chat.latestMessage ? (
-                      <Text fontSize="xs" color="text-secondary" isTruncated maxW="170px">
+                      <Text
+                        fontSize="xs"
+                        color="text-secondary"
+                        isTruncated
+                        maxW="170px"
+                      >
                         <b>{chat.latestMessage.sender.name.split(" ")[0]}:</b>{" "}
                         {chat.latestMessage.content.length > 35
                           ? chat.latestMessage.content.substring(0, 35) + "..."
                           : chat.latestMessage.content}
                       </Text>
                     ) : (
-                      <Text fontSize="xs" color="text-disabled">No messages yet</Text>
+                      <Text fontSize="xs" color="text-disabled">
+                        No messages yet
+                      </Text>
                     )}
                   </Box>
                 </Box>

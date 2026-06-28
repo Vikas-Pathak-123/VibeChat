@@ -7,14 +7,16 @@ import { useToast } from "@chakra-ui/react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../constants/api.constants";
+import { useChatState } from "../../context/ChatProvider";
 
 const Login: React.FC = () => {
   const [show, setShow]         = useState<boolean>(false);
   const [email, setEmail]       = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading]   = useState<boolean>(false);
-  const navigate = useNavigate();
-  const toast    = useToast();
+  const navigate  = useNavigate();
+  const toast     = useToast();
+  const { setUser } = useChatState();
 
   const submitHandler = async (): Promise<void> => {
     if (!email || !password) {
@@ -25,7 +27,9 @@ const Login: React.FC = () => {
       setLoading(true);
       const { data } = await axios.post(`${API_BASE_URL}/api/user/login`, { email, password });
       toast({ title: `Welcome back, ${data.name}! 👋`, status: "success", duration: 4000, isClosable: true, position: "top" });
+      // Update localStorage AND context simultaneously
       localStorage.setItem("userInfo", JSON.stringify(data));
+      setUser(data);
       navigate("/chats");
     } catch (error: any) {
       toast({ title: "Login failed", description: error.response?.data?.message, status: "error", duration: 4000, isClosable: true, position: "top" });
@@ -77,9 +81,10 @@ const Login: React.FC = () => {
         </Text>
       </Box>
 
-      <Button w="100%" size="lg" variant="ghost"
-        border="1px solid" borderColor="border-subtle" color="text-secondary"
-        borderRadius="8px" _hover={{ bg: "bg-elevated", color: "text-primary" }}
+      <Button w="100%" size="lg"
+        variant="ghost" border="1px solid" borderColor="border-subtle"
+        color="text-secondary" borderRadius="8px"
+        _hover={{ bg: "bg-elevated", color: "text-primary" }}
         onClick={() => { setEmail("guest@example.com"); setPassword("123456"); }}>
         🎭 Use Guest Credentials
       </Button>

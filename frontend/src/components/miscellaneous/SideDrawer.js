@@ -6,7 +6,8 @@ import { Menu, MenuButton, MenuDivider, MenuItem, MenuList } from "@chakra-ui/me
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay } from "@chakra-ui/modal";
 import { Tooltip } from "@chakra-ui/tooltip";
 import { BellIcon, ChevronDownIcon, SearchIcon } from "@chakra-ui/icons";
-import { Avatar, Badge } from "@chakra-ui/avatar";
+import { Avatar } from "@chakra-ui/avatar";
+import { Badge } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import axios from "axios";

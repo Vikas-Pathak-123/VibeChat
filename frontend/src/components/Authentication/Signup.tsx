@@ -7,24 +7,26 @@ import { Progress, Text, Box, useToast } from "@chakra-ui/react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../constants/api.constants";
+import { useChatState } from "../../context/ChatProvider";
 
 const Signup: React.FC = () => {
-  const [show, setShow]                     = useState<boolean>(false);
-  const [name, setName]                     = useState<string>("");
-  const [email, setEmail]                   = useState<string>("");
-  const [password, setPassword]             = useState<string>("");
+  const [show, setShow]                       = useState<boolean>(false);
+  const [name, setName]                       = useState<string>("");
+  const [email, setEmail]                     = useState<string>("");
+  const [password, setPassword]               = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
-  const [pic, setPic]                       = useState<string>("");
-  const [picLoading, setPicLoading]         = useState<boolean>(false);
-  const [uploadProgress, setUploadProgress] = useState<number>(0);
-  const navigate = useNavigate();
-  const toast    = useToast();
+  const [pic, setPic]                         = useState<string>("");
+  const [picLoading, setPicLoading]           = useState<boolean>(false);
+  const [uploadProgress, setUploadProgress]   = useState<number>(0);
+  const navigate  = useNavigate();
+  const toast     = useToast();
+  const { setUser } = useChatState();
 
   const getStrength = (): { value: number; label: string; color: string } => {
     if (!password) return { value: 0, label: "", color: "gray" };
-    if (password.length < 4) return { value: 25, label: "Weak", color: "red" };
-    if (password.length < 7) return { value: 50, label: "Fair", color: "orange" };
-    if (password.length < 10) return { value: 75, label: "Good", color: "yellow" };
+    if (password.length < 4)  return { value: 25, label: "Weak",   color: "red" };
+    if (password.length < 7)  return { value: 50, label: "Fair",   color: "orange" };
+    if (password.length < 10) return { value: 75, label: "Good",   color: "yellow" };
     return { value: 100, label: "Strong 💪", color: "green" };
   };
   const strength = getStrength();
@@ -42,7 +44,9 @@ const Signup: React.FC = () => {
       setPicLoading(true);
       const { data } = await axios.post(`${API_BASE_URL}/api/user`, { name, email, password, pic });
       toast({ title: `Welcome to VibeChat, ${data.name}! 🎉`, status: "success", duration: 4000, isClosable: true, position: "top" });
+      // Update localStorage AND context simultaneously
       localStorage.setItem("userInfo", JSON.stringify(data));
+      setUser(data);
       navigate("/chats");
     } catch (error: any) {
       toast({ title: "Registration failed", description: error.response?.data?.message, status: "error", duration: 4000, isClosable: true, position: "top" });
@@ -65,7 +69,11 @@ const Signup: React.FC = () => {
     formData.append("cloud_name", "difmt49ax");
     fetch("https://api.cloudinary.com/v1_1/difmt49ax/image/upload", { method: "post", body: formData })
       .then((r) => r.json())
-      .then((data) => { setPic(data.url); setUploadProgress(100); toast({ title: "Photo uploaded ✅", status: "success", duration: 3000, isClosable: true, position: "top" }); })
+      .then((data) => {
+        setPic(data.url);
+        setUploadProgress(100);
+        toast({ title: "Photo uploaded ✅", status: "success", duration: 3000, isClosable: true, position: "top" });
+      })
       .catch(() => toast({ title: "Upload failed", status: "error", duration: 4000, isClosable: true, position: "top" }))
       .finally(() => setPicLoading(false));
   };
@@ -96,8 +104,7 @@ const Signup: React.FC = () => {
             onChange={(e) => setPassword(e.target.value)} {...inputStyles} />
           <InputRightElement width="4.5rem">
             <Button h="1.75rem" size="sm" onClick={() => setShow(!show)}
-              variant="ghost" color="text-secondary">
-              {show ? "Hide" : "Show"}
+              variant="ghost" color="text-secondary">{show ? "Hide" : "Show"}
             </Button>
           </InputRightElement>
         </InputGroup>
@@ -119,8 +126,7 @@ const Signup: React.FC = () => {
           />
           <InputRightElement width="4.5rem">
             <Button h="1.75rem" size="sm" onClick={() => setShow(!show)}
-              variant="ghost" color="text-secondary">
-              {show ? "Hide" : "Show"}
+              variant="ghost" color="text-secondary">{show ? "Hide" : "Show"}
             </Button>
           </InputRightElement>
         </InputGroup>

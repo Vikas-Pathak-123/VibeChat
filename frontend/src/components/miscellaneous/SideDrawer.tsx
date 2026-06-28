@@ -73,91 +73,53 @@ const SideDrawer: React.FC = () => {
 
   return (
     <>
-      {/* ── Top Navigation Bar ───────────────────────────────── */}
       <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        w="100%"
-        px={4}
-        py={2}
-        bg="bg-surface"
-        borderBottom="1px solid"
-        borderColor="border-subtle"
+        display="flex" justifyContent="space-between" alignItems="center"
+        w="100%" px={4} py={2}
+        bg="bg-surface" borderBottom="1px solid" borderColor="border-subtle"
       >
-        {/* Search trigger */}
+        {/* Search */}
         <Tooltip label="Search Users" hasArrow placement="bottom-end">
           <Button
-            variant="nav"
-            size="sm"
-            onClick={onOpen}
+            variant="nav" size="sm" onClick={onOpen}
             leftIcon={<SearchIcon fontSize="11px" />}
-            border="1px solid"
-            borderColor="border-subtle"
+            border="1px solid" borderColor="border-subtle"
           >
-            <Text display={{ base: "none", md: "flex" }} fontSize="sm">
-              Search
-            </Text>
+            <Text display={{ base: "none", md: "flex" }} fontSize="sm">Search</Text>
           </Button>
         </Tooltip>
 
         {/* Brand */}
-        <Text
-          fontSize="xl"
-          fontWeight="bold"
-          bgGradient="linear(to-r, #833AB4, #E1306C, #F77737)"
-          bgClip="text"
-          letterSpacing="wider"
-        >
+        <Text fontSize="xl" fontWeight="bold" bgGradient="linear(to-r, #833AB4, #E1306C, #F77737)" bgClip="text" letterSpacing="wider">
           💬 VibeChat
         </Text>
 
-        {/* Right — ThemeToggle + Notifications + Profile */}
+        {/* Right — Theme Toggle + Bell + Profile */}
         <Box display="flex" alignItems="center" gap={2}>
           <ThemeToggle />
 
-          {/* Notification bell */}
+          {/* Notifications */}
           <Menu>
-            <MenuButton as={Box} position="relative" cursor="pointer">
-              <IconButton
-                aria-label="Notifications"
-                icon={<BellIcon fontSize="lg" />}
-                variant="nav"
-                size="sm"
-              />
-              {notification.length > 0 && (
-                <Badge
-                  position="absolute"
-                  top="-1"
-                  right="-1"
-                  colorScheme="red"
-                  borderRadius="full"
-                  fontSize="9px"
-                  w="16px"
-                  h="16px"
-                  display="flex"
-                  alignItems="center"
-                  justifyContent="center"
-                >
-                  {notification.length}
-                </Badge>
-              )}
+            <MenuButton position="relative">
+              <IconButton aria-label="Notifications" icon={<BellIcon fontSize="lg" />}
+                variant="nav" size="sm" color="text-secondary">
+                {notification.length > 0 && (
+                  <Badge position="absolute" top="-1" right="-1"
+                    colorScheme="red" borderRadius="full" fontSize="9px" w="16px" h="16px"
+                    display="flex" alignItems="center" justifyContent="center">
+                    {notification.length}
+                  </Badge>
+                )}
+              </IconButton>
             </MenuButton>
             <MenuList>
-              {!notification.length && (
-                <MenuItem>🔔 No new messages</MenuItem>
-              )}
+              {!notification.length && <MenuItem>🔔 No new messages</MenuItem>}
               {notification.map((notif) => (
-                <MenuItem
-                  key={notif._id}
-                  onClick={() => {
-                    setSelectedChat(notif.chat);
-                    setNotification(notification.filter((n) => n !== notif));
-                  }}
-                >
+                <MenuItem key={notif._id}
+                  onClick={() => { setSelectedChat(notif.chat); setNotification(notification.filter((n) => n !== notif)); }}>
                   {notif.chat.isGroupChat
-                    ? `📢 New message in ${notif.chat.chatName}`
-                    : `💬 New message from ${getSender(user!, notif.chat.users)}`}
+                    ? `📢 ${notif.chat.chatName}`
+                    : `💬 ${getSender(user!, notif.chat.users)}`}
                 </MenuItem>
               ))}
             </MenuList>
@@ -203,31 +165,17 @@ const SideDrawer: React.FC = () => {
           <DrawerBody pt={4}>
             <Box display="flex" pb={4} gap={2}>
               <Input
-                placeholder="Search by name or email..."
+                placeholder="Search by name or email"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onKeyPress={(e) => e.key === "Enter" && handleSearch()}
               />
-              <Button onClick={handleSearch} flexShrink={0}>
-                Go
-              </Button>
+              <Button onClick={handleSearch} flexShrink={0}>Go</Button>
             </Box>
-
-            {loading ? (
-              <ChatLoading />
-            ) : (
-              searchResult.map((u) => (
-                <UserListItem
-                  key={u._id}
-                  user={u}
-                  handleFunction={() => accessChat(u._id)}
-                />
-              ))
-            )}
-
-            {loadingChat && (
-              <Spinner display="flex" mx="auto" color="accent" />
-            )}
+            {loading ? <ChatLoading /> : searchResult.map((u) => (
+              <UserListItem key={u._id} user={u} handleFunction={() => accessChat(u._id)} />
+            ))}
+            {loadingChat && <Spinner display="flex" mx="auto" color="accent" />}
           </DrawerBody>
         </DrawerContent>
       </Drawer>

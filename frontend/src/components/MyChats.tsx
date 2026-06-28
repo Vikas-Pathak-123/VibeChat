@@ -17,7 +17,7 @@ interface MyChatsProps {
 }
 
 const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
-  const [loggedUser, setLoggedUser] = useState<User | null>(null);
+  const [loggedUser, setLoggedUser]   = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { selectedChat, setSelectedChat, user, chats, setChats } = useChatState();
   const toast = useToast();
@@ -52,7 +52,8 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
       w={{ base: "100%", md: "31%" }}
       bg="bg-surface"
       borderRadius="xl"
-      border="1px solid" borderColor="border-subtle"
+      border="1px solid"
+      borderColor="border-subtle"
       overflow="hidden"
     >
       {/* Header */}
@@ -110,8 +111,7 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
                   cursor="pointer"
                   display="flex"
                   alignItems="center"
-                  gap={3}
-                  px={3} py={2}
+                  gap={3} px={3} py={2}
                   borderRadius="10px"
                   bg={isSelected ? "bg-elevated" : "transparent"}
                   border="1px solid"

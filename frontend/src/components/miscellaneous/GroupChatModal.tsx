@@ -17,16 +17,14 @@ interface GroupChatModalProps {
 
 const GroupChatModal: React.FC<GroupChatModalProps> = ({ children }) => {
   const { isOpen, onOpen, onClose } = useDisclosure();
-  const [groupChatName, setGroupChatName]   = useState<string>("");
-  const [selectedUsers, setSelectedUsers]   = useState<User[]>([]);
-  const [search, setSearch]                 = useState<string>("");
-  const [searchResult, setSearchResult]     = useState<User[]>([]);
-  const [loading, setLoading]               = useState<boolean>(false);
+  const [groupChatName, setGroupChatName] = useState<string>("");
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
+  const [searchResult, setSearchResult]   = useState<User[]>([]);
+  const [loading, setLoading]             = useState<boolean>(false);
   const toast = useToast();
   const { user, chats, setChats } = useChatState();
 
   const handleSearch = async (query: string): Promise<void> => {
-    setSearch(query);
     if (!query) return;
     try {
       setLoading(true);
@@ -82,18 +80,23 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ children }) => {
           <ModalCloseButton />
           <ModalBody display="flex" flexDir="column" alignItems="center" gap={3}>
             <FormControl>
-              <Input placeholder="Group name" value={groupChatName} onChange={(e) => setGroupChatName(e.target.value)} />
+              <Input
+                placeholder="Group name"
+                value={groupChatName}
+                onChange={(e) => setGroupChatName(e.target.value)}
+              />
             </FormControl>
             <FormControl>
-              <Input placeholder="Search users to add..." onChange={(e) => handleSearch(e.target.value)} />
+              <Input
+                placeholder="Search users to add..."
+                onChange={(e) => handleSearch(e.target.value)}
+              />
             </FormControl>
-            {/* Selected Users */}
             <Box w="100%" display="flex" flexWrap="wrap">
               {selectedUsers.map((u) => (
                 <UserBadgeItem key={u._id} user={u} handleFunction={() => handleDelete(u)} />
               ))}
             </Box>
-            {/* Search Results */}
             {loading
               ? <Spinner color="accent" />
               : searchResult.slice(0, 5).map((u) => (

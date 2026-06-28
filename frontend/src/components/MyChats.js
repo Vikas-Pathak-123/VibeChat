@@ -39,11 +39,6 @@ const MyChats = ({ fetchAgain }) => {
       })
     : [];
 
-  const getInitials = (name) => {
-    if (!name) return "?";
-    return name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  };
-
   return (
     <Box
       display={{ base: selectedChat ? "none" : "flex", md: "flex" }}
@@ -57,8 +52,7 @@ const MyChats = ({ fetchAgain }) => {
     >
       {/* Header */}
       <Box
-        px={4}
-        py={3}
+        px={4} py={3}
         borderBottom="1px solid rgba(255,255,255,0.1)"
         display="flex"
         justifyContent="space-between"
@@ -135,7 +129,7 @@ const MyChats = ({ fetchAgain }) => {
                   px={3}
                   py={2}
                   borderRadius="lg"
-                  bg={isSelected ? "linear-gradient(to right, rgba(233,69,96,0.3), rgba(15,52,96,0.3))" : "transparent"}
+                  bg={isSelected ? "rgba(233,69,96,0.15)" : "transparent"}
                   border={isSelected ? "1px solid rgba(233,69,96,0.4)" : "1px solid transparent"}
                   _hover={{ bg: "rgba(255,255,255,0.07)", border: "1px solid rgba(255,255,255,0.1)" }}
                   transition="all 0.15s"
@@ -150,17 +144,11 @@ const MyChats = ({ fetchAgain }) => {
                       color="white"
                       fontSize="xs"
                     />
-                    {/* Online indicator - show for 1:1 chats */}
                     {!chat.isGroupChat && (
                       <Box
-                        position="absolute"
-                        bottom="0"
-                        right="0"
-                        w="9px"
-                        h="9px"
-                        bg="#48BB78"
-                        borderRadius="full"
-                        border="2px solid #1a1a2e"
+                        position="absolute" bottom="0" right="0"
+                        w="9px" h="9px" bg="#48BB78"
+                        borderRadius="full" border="2px solid #1a1a2e"
                       />
                     )}
                   </Box>
@@ -183,18 +171,15 @@ const MyChats = ({ fetchAgain }) => {
                         </Badge>
                       )}
                     </Box>
-                    {chat.latestMessage && (
+                    {chat.latestMessage ? (
                       <Text fontSize="xs" color={isSelected ? "whiteAlpha.700" : "whiteAlpha.500"} isTruncated maxW="170px">
                         <b>{chat.latestMessage.sender.name.split(" ")[0]}:</b>{" "}
                         {chat.latestMessage.content.length > 35
                           ? chat.latestMessage.content.substring(0, 35) + "..."
                           : chat.latestMessage.content}
                       </Text>
-                    )}
-                    {!chat.latestMessage && (
-                      <Text fontSize="xs" color="whiteAlpha.400" isTruncated>
-                        No messages yet
-                      </Text>
+                    ) : (
+                      <Text fontSize="xs" color="whiteAlpha.400">No messages yet</Text>
                     )}
                   </Box>
                 </Box>

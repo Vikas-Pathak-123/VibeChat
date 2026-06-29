@@ -1,6 +1,6 @@
 import { ViewIcon, EditIcon, EmailIcon } from "@chakra-ui/icons";
 import {
-  Modal, ModalOverlay, ModalContent, ModalHeader,
+  Modal, ModalOverlay, ModalContent,
   ModalBody, ModalCloseButton, Button, useDisclosure,
   IconButton, Text, Image, Box, Divider, useToast,
   Input, VStack, HStack, Tooltip,

@@ -31,7 +31,6 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, handleFunction }) => 
       bg="accent"
       color="white"
       flexShrink={0}
-      fallbackSrc={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=E1306C&color=fff`}
     />
     <Box overflow="hidden">
       <Text fontSize="sm" fontWeight="semibold" color="text-primary" isTruncated>

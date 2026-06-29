@@ -64,8 +64,9 @@ const SideDrawer: React.FC = () => {
       if (!chats.find((c) => c._id === data._id)) setChats([data, ...chats]);
       setSelectedChat(data);
       onClose();
-    } catch (error: any) {
-      toast({ title: "Error fetching chat", description: error.message, status: "error", duration: 5000, isClosable: true, position: "top" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "An unexpected error occurred";
+      toast({ title: "Error fetching chat", description: message, status: "error", duration: 5000, isClosable: true, position: "top" });
     } finally {
       setLoadingChat(false);
     }

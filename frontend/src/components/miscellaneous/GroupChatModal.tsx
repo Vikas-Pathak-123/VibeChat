@@ -65,8 +65,17 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ children }) => {
       setChats([data, ...chats]);
       onClose();
       toast({ title: "Group chat created! 🎉", status: "success", duration: 4000, isClosable: true, position: "bottom" });
-    } catch (error: any) {
-      toast({ title: "Failed to create group", description: error.response?.data, status: "error", duration: 5000, isClosable: true, position: "bottom" });
+    } catch (error) {
+      let message = "An unexpected error occurred";
+      if (axios.isAxiosError(error)) {
+        // Safe check for string or object data
+        message = typeof error.response?.data === "string" 
+          ? error.response.data 
+          : (error.response?.data?.message || error.message);
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      toast({ title: "Failed to create group", description: message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
     }
   };
 

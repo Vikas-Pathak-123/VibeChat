@@ -54,8 +54,14 @@ const UpdateGroupChatModal: React.FC<UpdateGroupChatModalProps> = ({ fetchMessag
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       setGroupChatName("");
-    } catch (error: any) {
-      toast({ title: "Rename failed", description: error.response?.data?.message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
+    } catch (error) {
+      let message = "An unexpected error occurred";
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      toast({ title: "Rename failed", description: message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
     } finally {
       setRenameLoading(false);
     }
@@ -79,8 +85,14 @@ const UpdateGroupChatModal: React.FC<UpdateGroupChatModalProps> = ({ fetchMessag
       );
       setSelectedChat(data);
       setFetchAgain(!fetchAgain);
-    } catch (error: any) {
-      toast({ title: "Failed to add user", description: error.response?.data?.message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
+    } catch (error) {
+      let message = "An unexpected error occurred";
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      toast({ title: "Failed to add user", description: message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
     } finally {
       setLoading(false);
     }
@@ -101,8 +113,14 @@ const UpdateGroupChatModal: React.FC<UpdateGroupChatModalProps> = ({ fetchMessag
       userToRemove._id === user?._id ? setSelectedChat(null) : setSelectedChat(data);
       setFetchAgain(!fetchAgain);
       fetchMessages();
-    } catch (error: any) {
-      toast({ title: "Failed to remove user", description: error.response?.data?.message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
+    } catch (error) {
+      let message = "An unexpected error occurred";
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      toast({ title: "Failed to remove user", description: message, status: "error", duration: 5000, isClosable: true, position: "bottom" });
     } finally {
       setLoading(false);
     }

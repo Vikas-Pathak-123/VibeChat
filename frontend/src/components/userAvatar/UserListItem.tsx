@@ -11,22 +11,35 @@ const UserListItem: React.FC<UserListItemProps> = ({ user, handleFunction }) => 
   <Box
     onClick={handleFunction}
     cursor="pointer"
-    bg="bg-elevated"
-    _hover={{ bg: "bg-input", color: "text-primary" }}
-    w="100%"
     display="flex"
     alignItems="center"
-    color="text-primary"
+    gap={3}
     px={3}
     py={2}
-    mb={2}
+    mb={1}
     borderRadius="10px"
+    border="1px solid transparent"
+    bg="bg-elevated"
+    color="text-primary"
+    _hover={{ bg: "bg-input", borderColor: "border-subtle" }}
     transition="all 0.15s"
   >
-    <Avatar mr={3} size="sm" name={user.name} src={user.picture} />
-    <Box>
-      <Text fontSize="sm" fontWeight="semibold">{user.name}</Text>
-      <Text fontSize="xs" color="text-secondary">{user.email}</Text>
+    <Avatar
+      size="sm"
+      name={user.name}
+      src={user.picture}
+      bg="accent"
+      color="white"
+      flexShrink={0}
+      fallbackSrc={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=E1306C&color=fff`}
+    />
+    <Box overflow="hidden">
+      <Text fontSize="sm" fontWeight="semibold" color="text-primary" isTruncated>
+        {user.name}
+      </Text>
+      <Text fontSize="xs" color="text-secondary" isTruncated>
+        {user.email}
+      </Text>
     </Box>
   </Box>
 );

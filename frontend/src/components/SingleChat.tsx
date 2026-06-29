@@ -12,7 +12,7 @@ import { Player } from "@lottiefiles/react-lottie-player";
 import { getSenderFull } from "../config/ChatLogics";
 import { useChatState } from "../context/ChatProvider";
 import { API_BASE_URL, SOCKET_ENDPOINT } from "../constants/api.constants";
-import { Message } from "../types";
+import { Message, Chat } from "../types";
 import ScrollableChat from "./ScrollableChat";
 import ProfileModal from "./miscellaneous/ProfileModal";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
@@ -23,7 +23,7 @@ interface SingleChatProps {
 }
 
 // Tracks selected chat outside React state to avoid stale closure in socket listener
-let selectedChatCompare: any;
+let selectedChatCompare: Chat | null;
 
 const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) => {
   const [messages, setMessages]               = useState<Message[]>([]);

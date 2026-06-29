@@ -48,8 +48,14 @@ const Signup: React.FC = () => {
       localStorage.setItem("userInfo", JSON.stringify(data));
       setUser(data);
       navigate("/chats");
-    } catch (error: any) {
-      toast({ title: "Registration failed", description: error.response?.data?.message, status: "error", duration: 4000, isClosable: true, position: "top" });
+    } catch (error) {
+      let message = "An unexpected error occurred";
+      if (axios.isAxiosError(error)) {
+        message = error.response?.data?.message || error.message;
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      toast({ title: "Registration failed", description: message, status: "error", duration: 4000, isClosable: true, position: "top" });
     } finally {
       setPicLoading(false);
     }

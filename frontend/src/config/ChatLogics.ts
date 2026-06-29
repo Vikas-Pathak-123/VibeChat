@@ -1,9 +1,7 @@
-import { Message } from "../types";
-import { User } from "../types";
+import { Message, User } from "../types";
 
 /**
  * Determines left margin for a message bubble based on sender grouping.
- * Returns a number (px) or "auto" for sent messages.
  */
 export const isSameSenderMargin = (
   messages: Message[],
@@ -50,8 +48,11 @@ export const isLastMessage = (
   !!messages[messages.length - 1].sender._id;
 
 /** Returns true if consecutive messages are from the same sender */
-export const isSameUser = (messages: Message[], m: Message, i: number): boolean =>
-  i > 0 && messages[i - 1].sender._id === m.sender._id;
+export const isSameUser = (
+  messages: Message[],
+  m: Message,
+  i: number
+): boolean => i > 0 && messages[i - 1].sender._id === m.sender._id;
 
 /** Returns the display name of the other participant in a 1:1 chat */
 export const getSender = (loggedUser: User, users: User[]): string =>

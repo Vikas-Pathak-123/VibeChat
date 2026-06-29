@@ -3,12 +3,16 @@ import { Input } from "@chakra-ui/input";
 import { Box, Text } from "@chakra-ui/layout";
 import { Menu, MenuButton, MenuDivider, MenuItem, MenuList } from "@chakra-ui/menu";
 import { Drawer, DrawerBody, DrawerContent, DrawerHeader, DrawerOverlay } from "@chakra-ui/modal";
+import {
+  AlertDialog, AlertDialogBody, AlertDialogContent, AlertDialogFooter,
+  AlertDialogHeader, AlertDialogOverlay,
+} from "@chakra-ui/modal";
 import { Tooltip } from "@chakra-ui/tooltip";
 import { BellIcon, ChevronDownIcon, SearchIcon } from "@chakra-ui/icons";
 import { Avatar } from "@chakra-ui/avatar";
 import { Badge, Button, IconButton, Spinner, useToast } from "@chakra-ui/react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import axios from "axios";
 import ChatLoading from "../shared/ChatLoading";
 import ProfileModal from "./ProfileModal";
@@ -28,7 +32,12 @@ const SideDrawer: React.FC = () => {
   const { setSelectedChat, user, notification, setNotification, chats, setChats } = useChatState();
   const toast    = useToast();
   const navigate = useNavigate();
-  const { isOpen, onOpen, onClose } = useDisclosure();
+
+  // Search drawer
+  const { isOpen: isSearchOpen, onOpen: onSearchOpen, onClose: onSearchClose } = useDisclosure();
+  // Logout confirmation dialog
+  const { isOpen: isLogoutOpen, onOpen: onLogoutOpen, onClose: onLogoutClose } = useDisclosure();
+  const cancelLogoutRef = useRef<HTMLButtonElement>(null);
 
   const logoutHandler = (): void => {
     localStorage.removeItem("userInfo");
@@ -63,7 +72,7 @@ const SideDrawer: React.FC = () => {
       );
       if (!chats.find((c) => c._id === data._id)) setChats([data, ...chats]);
       setSelectedChat(data);
-      onClose();
+      onSearchClose();
     } catch (error) {
       const message = error instanceof Error ? error.message : "An unexpected error occurred";
       toast({ title: "Error fetching chat", description: message, status: "error", duration: 5000, isClosable: true, position: "top" });
@@ -74,7 +83,7 @@ const SideDrawer: React.FC = () => {
 
   return (
     <>
-      {/* Top Navigation Bar */}
+      {/* ── Top Navigation Bar ───────────────────────────────────── */}
       <Box
         display="flex" justifyContent="space-between" alignItems="center"
         w="100%" px={4} py={2}
@@ -82,7 +91,7 @@ const SideDrawer: React.FC = () => {
       >
         {/* Search trigger */}
         <Tooltip label="Search Users" hasArrow placement="bottom-end">
-          <Button variant="nav" size="sm" onClick={onOpen}
+          <Button variant="nav" size="sm" onClick={onSearchOpen}
             leftIcon={<SearchIcon fontSize="11px" />}
             border="1px solid" borderColor="border-subtle">
             <Text display={{ base: "none", md: "flex" }} fontSize="sm">Search</Text>
@@ -117,7 +126,10 @@ const SideDrawer: React.FC = () => {
               {!notification.length && <MenuItem>🔔 No new messages</MenuItem>}
               {notification.map((notif) => (
                 <MenuItem key={notif._id}
-                  onClick={() => { setSelectedChat(notif.chat); setNotification(notification.filter((n) => n !== notif)); }}>
+                  onClick={() => {
+                    setSelectedChat(notif.chat);
+                    setNotification(notification.filter((n) => n !== notif));
+                  }}>
                   {notif.chat.isGroupChat
                     ? `📢 New message in ${notif.chat.chatName}`
                     : `💬 New message from ${getSender(user!, notif.chat.users)}`}
@@ -138,14 +150,14 @@ const SideDrawer: React.FC = () => {
                 <MenuItem>👤 My Profile</MenuItem>
               </ProfileModal>
               <MenuDivider />
-              <MenuItem color="accent" onClick={logoutHandler}>🚪 Logout</MenuItem>
+              <MenuItem color="red.400" onClick={onLogoutOpen}>🚪 Logout</MenuItem>
             </MenuList>
           </Menu>
         </Box>
       </Box>
 
-      {/* Search Drawer */}
-      <Drawer placement="left" onClose={onClose} isOpen={isOpen}>
+      {/* ── Search Drawer ─────────────────────────────────────────── */}
+      <Drawer placement="left" onClose={onSearchClose} isOpen={isSearchOpen}>
         <DrawerOverlay backdropFilter="blur(4px)" />
         <DrawerContent bg="bg-surface">
           <DrawerHeader borderBottomWidth="1px" borderColor="border-subtle" color="text-primary">
@@ -165,6 +177,35 @@ const SideDrawer: React.FC = () => {
           </DrawerBody>
         </DrawerContent>
       </Drawer>
+
+      {/* ── Logout Confirmation Dialog ────────────────────────────── */}
+      <AlertDialog
+        isOpen={isLogoutOpen}
+        leastDestructiveRef={cancelLogoutRef}
+        onClose={onLogoutClose}
+        isCentered
+      >
+        <AlertDialogOverlay backdropFilter="blur(4px)">
+          <AlertDialogContent bg="bg-surface" border="1px solid" borderColor="border-subtle" borderRadius="16px">
+            <AlertDialogHeader color="text-primary" fontWeight="bold" fontSize="lg">
+              Logout
+            </AlertDialogHeader>
+            <AlertDialogBody color="text-secondary">
+              Are you sure you want to log out of VibeChat?
+            </AlertDialogBody>
+            <AlertDialogFooter gap={3}>
+              <Button ref={cancelLogoutRef} variant="nav"
+                border="1px solid" borderColor="border-subtle"
+                color="text-primary" onClick={onLogoutClose}>
+                Cancel
+              </Button>
+              <Button colorScheme="red" onClick={logoutHandler}>
+                Logout
+              </Button>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialogOverlay>
+      </AlertDialog>
     </>
   );
 };

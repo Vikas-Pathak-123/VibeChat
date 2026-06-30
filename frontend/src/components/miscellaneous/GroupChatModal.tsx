@@ -82,12 +82,12 @@ const GroupChatModal: React.FC<GroupChatModalProps> = ({ children }) => {
   return (
     <>
       <span onClick={onOpen}>{children}</span>
-      <Modal onClose={onClose} isOpen={isOpen} isCentered>
+      <Modal onClose={onClose} isOpen={isOpen} isCentered size={{ base: "xs", sm: "md" }}>
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent>
-          <ModalHeader textAlign="center">Create Group Chat</ModalHeader>
+        <ModalContent mx={4} maxH="85vh">
+          <ModalHeader textAlign="center" fontSize={{ base: "md", sm: "lg" }}>Create Group Chat</ModalHeader>
           <ModalCloseButton />
-          <ModalBody display="flex" flexDir="column" alignItems="center" gap={3}>
+          <ModalBody display="flex" flexDir="column" alignItems="center" gap={3} overflowY="auto">
             <FormControl>
               <Input
                 placeholder="Group name"

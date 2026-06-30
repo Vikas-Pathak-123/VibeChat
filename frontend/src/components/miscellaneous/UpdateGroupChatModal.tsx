@@ -129,22 +129,22 @@ const UpdateGroupChatModal: React.FC<UpdateGroupChatModalProps> = ({ fetchMessag
   return (
     <>
       <IconButton aria-label="Update group" icon={<ViewIcon />} onClick={onOpen} variant="nav" size="sm" />
-      <Modal onClose={onClose} isOpen={isOpen} isCentered>
+      <Modal onClose={onClose} isOpen={isOpen} isCentered size={{ base: "xs", sm: "md" }}>
         <ModalOverlay backdropFilter="blur(4px)" />
-        <ModalContent>
-          <ModalHeader textAlign="center">{selectedChat?.chatName}</ModalHeader>
+        <ModalContent mx={4} maxH="85vh">
+          <ModalHeader textAlign="center" fontSize={{ base: "md", sm: "lg" }}>{selectedChat?.chatName}</ModalHeader>
           <ModalCloseButton />
-          <ModalBody display="flex" flexDir="column" gap={3}>
+          <ModalBody display="flex" flexDir="column" gap={3} overflowY="auto">
             {/* Current Members */}
             <Box display="flex" flexWrap="wrap">
               {selectedChat?.users.map((u) => (
                 <UserBadgeItem key={u._id} user={u} admin={selectedChat.groupAdmin} handleFunction={() => handleRemove(u)} />
               ))}
             </Box>
-            {/* Rename */}
-            <FormControl display="flex" gap={2}>
+            {/* Rename — stacks vertically on mobile so button never gets cramped */}
+            <FormControl display="flex" flexDir={{ base: "column", sm: "row" }} gap={2}>
               <Input placeholder="New group name" value={groupChatName} onChange={(e) => setGroupChatName(e.target.value)} />
-              <Button isLoading={renameLoading} onClick={handleRename} flexShrink={0} px={6}>Rename</Button>
+              <Button isLoading={renameLoading} onClick={handleRename} flexShrink={0} px={6} w={{ base: "100%", sm: "auto" }}>Rename</Button>
             </FormControl>
             {/* Add Member */}
             <FormControl>

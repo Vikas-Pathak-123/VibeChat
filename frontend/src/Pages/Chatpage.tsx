@@ -19,15 +19,16 @@ const Chatpage: React.FC = () => {
   }
 
   return (
-    <Box minH="100vh" bg="bg-app" display="flex" flexDirection="column">
+    <Box minH="100vh" h="100vh" bg="bg-app" display="flex" flexDirection="column" overflow="hidden">
       {user && <SideDrawer />}
       <Box
         display="flex"
         justifyContent="space-between"
         w="100%"
         flex="1"
-        p="10px"
-        gap={3}
+        minH={0}
+        p={{ base: "6px", md: "10px" }}
+        gap={{ base: 0, md: 3 }}
         overflow="hidden"
       >
         {user && <MyChats fetchAgain={fetchAgain} />}

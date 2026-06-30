@@ -33,9 +33,7 @@ const SideDrawer: React.FC = () => {
   const toast    = useToast();
   const navigate = useNavigate();
 
-  // Search drawer
   const { isOpen: isSearchOpen, onOpen: onSearchOpen, onClose: onSearchClose } = useDisclosure();
-  // Logout confirmation dialog
   const { isOpen: isLogoutOpen, onOpen: onLogoutOpen, onClose: onLogoutClose } = useDisclosure();
   const cancelLogoutRef = useRef<HTMLButtonElement>(null);
 
@@ -86,28 +84,40 @@ const SideDrawer: React.FC = () => {
       {/* ── Top Navigation Bar ───────────────────────────────────── */}
       <Box
         display="flex" justifyContent="space-between" alignItems="center"
-        w="100%" px={4} py={2}
+        w="100%" px={{ base: 2, md: 4 }} py={2}
         bg="bg-surface" borderBottom="1px solid" borderColor="border-subtle"
+        flexShrink={0}
       >
-        {/* Search trigger */}
+        {/* Search trigger — icon only on mobile */}
         <Tooltip label="Search Users" hasArrow placement="bottom-end">
           <Button variant="nav" size="sm" onClick={onSearchOpen}
+            px={{ base: 2, md: 4 }}
             leftIcon={<SearchIcon fontSize="11px" />}
-            border="1px solid" borderColor="border-subtle">
+            border="1px solid" borderColor="border-subtle"
+            flexShrink={0}>
             <Text display={{ base: "none", md: "flex" }} fontSize="sm">Search</Text>
           </Button>
         </Tooltip>
 
-        {/* Brand */}
-        <Text fontSize="xl" fontWeight="bold"
+        {/* Brand — shrinks and truncates instead of overflowing */}
+        <Text
+          fontSize={{ base: "md", sm: "lg", md: "xl" }}
+          fontWeight="bold"
           bgGradient="linear(to-r, #833AB4, #E1306C, #F77737)"
-          bgClip="text" letterSpacing="wider">
+          bgClip="text" letterSpacing="wider"
+          isTruncated
+          mx={2}
+          flexShrink={1}
+          minW={0}
+        >
           💬 VibeChat
         </Text>
 
         {/* Right — ThemeToggle + Notifications + Profile */}
-        <Box display="flex" alignItems="center" gap={2}>
-          <ThemeToggle />
+        <Box display="flex" alignItems="center" gap={{ base: 1, md: 2 }} flexShrink={0}>
+          <Box display={{ base: "none", sm: "block" }}>
+            <ThemeToggle />
+          </Box>
 
           {/* Notification bell */}
           <Menu>
@@ -122,10 +132,11 @@ const SideDrawer: React.FC = () => {
                 </Badge>
               )}
             </MenuButton>
-            <MenuList>
+            <MenuList maxW="90vw">
               {!notification.length && <MenuItem>🔔 No new messages</MenuItem>}
               {notification.map((notif) => (
                 <MenuItem key={notif._id}
+                  whiteSpace="normal"
                   onClick={() => {
                     setSelectedChat(notif.chat);
                     setNotification(notification.filter((n) => n !== notif));
@@ -146,6 +157,14 @@ const SideDrawer: React.FC = () => {
               <Avatar size="xs" name={user?.name} src={user?.picture} />
             </MenuButton>
             <MenuList>
+              {/* Theme toggle inside menu on mobile, since it's hidden in the bar */}
+              <Box display={{ base: "flex", sm: "none" }} px={3} py={1} justifyContent="space-between" alignItems="center">
+                <Text fontSize="sm" color="text-secondary">Theme</Text>
+                <ThemeToggle />
+              </Box>
+              <Box display={{ base: "block", sm: "none" }}>
+                <MenuDivider />
+              </Box>
               <ProfileModal user={user!}>
                 <MenuItem>👤 My Profile</MenuItem>
               </ProfileModal>
@@ -159,7 +178,7 @@ const SideDrawer: React.FC = () => {
       {/* ── Search Drawer ─────────────────────────────────────────── */}
       <Drawer placement="left" onClose={onSearchClose} isOpen={isSearchOpen}>
         <DrawerOverlay backdropFilter="blur(4px)" />
-        <DrawerContent bg="bg-surface">
+        <DrawerContent bg="bg-surface" maxW={{ base: "85vw", sm: "350px" }}>
           <DrawerHeader borderBottomWidth="1px" borderColor="border-subtle" color="text-primary">
             🔍 Search Users
           </DrawerHeader>
@@ -186,7 +205,10 @@ const SideDrawer: React.FC = () => {
         isCentered
       >
         <AlertDialogOverlay backdropFilter="blur(4px)">
-          <AlertDialogContent bg="bg-surface" border="1px solid" borderColor="border-subtle" borderRadius="16px">
+          <AlertDialogContent
+            bg="bg-surface" border="1px solid" borderColor="border-subtle"
+            borderRadius="16px" mx={4} maxW={{ base: "90vw", sm: "400px" }}
+          >
             <AlertDialogHeader color="text-primary" fontWeight="bold" fontSize="lg">
               Logout
             </AlertDialogHeader>

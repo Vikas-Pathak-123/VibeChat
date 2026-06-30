@@ -150,16 +150,18 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
       {/* ── Chat Header ─────────────────────────────────────────────────── */}
       <Box
         display="flex" alignItems="center" justifyContent="space-between"
-        px={4} py={3}
+        px={{ base: 2, md: 4 }} py={3}
         bg="bg-surface"
         borderBottom="1px solid" borderColor="border-subtle"
+        gap={2}
       >
-        <Box display="flex" alignItems="center" gap={3}>
+        <Box display="flex" alignItems="center" gap={{ base: 2, md: 3 }} minW={0} flex="1" overflow="hidden">
           <IconButton
             aria-label="Back"
             display={{ base: "flex", md: "none" }}
             icon={<ArrowBackIcon />}
             variant="nav" size="sm"
+            flexShrink={0}
             onClick={() => setSelectedChat(null)}
           />
           <Avatar
@@ -167,9 +169,10 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
             name={selectedChat.isGroupChat ? selectedChat.chatName : chatPartner?.name}
             src={chatPartner?.picture ?? undefined}
             bg="accent"
+            flexShrink={0}
           />
-          <Box>
-            <Text fontWeight="bold" color="text-primary" fontSize="md" lineHeight="1.2">
+          <Box minW={0} overflow="hidden">
+            <Text fontWeight="bold" color="text-primary" fontSize="md" lineHeight="1.2" isTruncated>
               {selectedChat.isGroupChat ? selectedChat.chatName : chatPartner?.name}
             </Text>
             {!selectedChat.isGroupChat ? (
@@ -182,14 +185,16 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
           </Box>
         </Box>
 
-        {selectedChat.isGroupChat
-          ? <UpdateGroupChatModal
-              fetchMessages={fetchMessages}
-              fetchAgain={fetchAgain}
-              setFetchAgain={setFetchAgain}
-            />
-          : <ProfileModal user={chatPartner!} />
-        }
+        <Box flexShrink={0}>
+          {selectedChat.isGroupChat
+            ? <UpdateGroupChatModal
+                fetchMessages={fetchMessages}
+                fetchAgain={fetchAgain}
+                setFetchAgain={setFetchAgain}
+              />
+            : <ProfileModal user={chatPartner!} />
+          }
+        </Box>
       </Box>
 
       {/* ── Messages Area ───────────────────────────────────────────────── */}
@@ -223,7 +228,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
       )}
 
       {/* ── Message Input ───────────────────────────────────────────────── */}
-      <Box px={4} py={3} bg="bg-surface" borderTop="1px solid" borderColor="border-subtle">
+      <Box px={{ base: 2, md: 4 }} py={3} bg="bg-surface" borderTop="1px solid" borderColor="border-subtle">
         <FormControl onKeyDown={sendMessage}>
           <InputGroup size="md">
             <Input
@@ -251,7 +256,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
               />
             </InputRightElement>
           </InputGroup>
-          <Text fontSize="10px" color="text-disabled" mt={1} textAlign="center">
+          <Text display={{ base: "none", md: "block" }} fontSize="10px" color="text-disabled" mt={1} textAlign="center">
             Press Enter to send
           </Text>
         </FormControl>

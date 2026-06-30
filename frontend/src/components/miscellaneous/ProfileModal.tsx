@@ -111,6 +111,7 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, children }) => {
           borderColor="border-subtle"
           borderRadius="16px"
           overflow="hidden"
+          mx={4}
         >
           {/* ── Gradient Header Banner ─────────────────────────────── */}
           <Box
@@ -253,3 +254,4 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, children }) => {
 };
 
 export default ProfileModal;
+

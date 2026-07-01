@@ -23,6 +23,9 @@
     "mongoose": "^7.1.0",
     "socket.io": "^4.6.1"
   },
+  "engines": {
+    "node": "20.x"
+  },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.19",

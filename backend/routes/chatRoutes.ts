@@ -6,8 +6,9 @@ import {
   removeFromGroup,
   addToGroup,
   renameGroup,
-} from "../controllers/chatControllers.js";
-import { protect } from "../Middleware/authMiddleware.js";
+} from "../controllers/chatControllers";
+import { protect } from "../Middleware/authMiddleware";
+
 const router = express.Router();
 
 router.route("/").post(protect, accessChat);

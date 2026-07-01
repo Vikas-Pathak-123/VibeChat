@@ -1,6 +1,7 @@
 import express from "express";
-import { allMessages, sendMessage } from "../controllers/messageControllers.js";
-import { protect } from "../Middleware/authMiddleware.js";
+import { allMessages, sendMessage } from "../controllers/messageControllers";
+import { protect } from "../Middleware/authMiddleware";
+
 const router = express.Router();
 
 router.route("/:chatId").get(protect, allMessages);

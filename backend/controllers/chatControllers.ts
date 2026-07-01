@@ -1,11 +1,12 @@
+import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import Chat from "../models/chatModel.js";
-import User from "../models/userModel.js";
+import Chat from "../models/chatModel";
+import User from "../models/userModel";
 
 //@description     Create or fetch One to One Chat
 //@route           POST /api/chat/
 //@access          Protected
-export const accessChat = asyncHandler(async (req, res) => {
+export const accessChat = asyncHandler(async (req: Request, res: Response): Promise<any> => {
   const { userId } = req.body;
 
   if (!userId) {
@@ -13,7 +14,12 @@ export const accessChat = asyncHandler(async (req, res) => {
     return res.sendStatus(400);
   }
 
-  var isChat = await Chat.find({
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  let isChat: any = await Chat.find({
     isGroupChat: false,
     $and: [
       { users: { $elemMatch: { $eq: req.user._id } } },
@@ -31,7 +37,7 @@ export const accessChat = asyncHandler(async (req, res) => {
   if (isChat.length > 0) {
     res.send(isChat[0]);
   } else {
-    var chatData = {
+    const chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [req.user._id, userId],
@@ -44,7 +50,7 @@ export const accessChat = asyncHandler(async (req, res) => {
         "-password"
       );
       res.status(200).json(FullChat);
-    } catch (error) {
+    } catch (error: any) {
       res.status(400);
       throw new Error(error.message);
     }
@@ -54,21 +60,26 @@ export const accessChat = asyncHandler(async (req, res) => {
 //@description     Fetch all chats for a user
 //@route           GET /api/chat/
 //@access          Protected
-export const fetchChats = asyncHandler(async (req, res) => {
+export const fetchChats = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
-    Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
+    if (!req.user) {
+      res.status(401);
+      throw new Error("Not authorized");
+    }
+
+    const results = await Chat.find({ users: { $elemMatch: { $eq: req.user._id } } })
       .populate("users", "-password")
       .populate("groupAdmin", "-password")
       .populate("latestMessage")
-      .sort({ updatedAt: -1 })
-      .then(async (results) => {
-        results = await User.populate(results, {
-          path: "latestMessage.sender",
-          select: "name pic email",
-        });
-        res.status(200).send(results);
-      });
-  } catch (error) {
+      .sort({ updatedAt: -1 });
+
+    const populatedResults = await User.populate(results, {
+      path: "latestMessage.sender",
+      select: "name pic email",
+    });
+
+    res.status(200).send(populatedResults);
+  } catch (error: any) {
     res.status(400);
     throw new Error(error.message);
   }
@@ -77,12 +88,17 @@ export const fetchChats = asyncHandler(async (req, res) => {
 //@description     Create New Group Chat
 //@route           POST /api/chat/group
 //@access          Protected
-export const createGroupChat = asyncHandler(async (req, res) => {
+export const createGroupChat = asyncHandler(async (req: Request, res: Response): Promise<any> => {
   if (!req.body.users || !req.body.name) {
-    return res.status(400).send({ message: "Please Fill all the feilds" });
+    return res.status(400).send({ message: "Please Fill all the fields" });
   }
 
-  var users = JSON.parse(req.body.users);
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  const users = JSON.parse(req.body.users);
 
   if (users.length < 2) {
     return res
@@ -105,7 +121,7 @@ export const createGroupChat = asyncHandler(async (req, res) => {
       .populate("groupAdmin", "-password");
 
     res.status(200).json(fullGroupChat);
-  } catch (error) {
+  } catch (error: any) {
     res.status(400);
     throw new Error(error.message);
   }
@@ -114,7 +130,7 @@ export const createGroupChat = asyncHandler(async (req, res) => {
 // @desc    Rename Group
 // @route   PUT /api/chat/rename
 // @access  Protected
-export const renameGroup = asyncHandler(async (req, res) => {
+export const renameGroup = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { chatId, chatName } = req.body;
 
   const updatedChat = await Chat.findByIdAndUpdate(
@@ -140,10 +156,8 @@ export const renameGroup = asyncHandler(async (req, res) => {
 // @desc    Remove user from Group
 // @route   PUT /api/chat/groupremove
 // @access  Protected
-export const removeFromGroup = asyncHandler(async (req, res) => {
+export const removeFromGroup = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { chatId, userId } = req.body;
-
-  // check if the requester is admin
 
   const removed = await Chat.findByIdAndUpdate(
     chatId,
@@ -168,10 +182,8 @@ export const removeFromGroup = asyncHandler(async (req, res) => {
 // @desc    Add user to Group / Leave
 // @route   PUT /api/chat/groupadd
 // @access  Protected
-export const addToGroup = asyncHandler(async (req, res) => {
+export const addToGroup = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { chatId, userId } = req.body;
-
-  // check if the requester is admin
 
   const added = await Chat.findByIdAndUpdate(
     chatId,

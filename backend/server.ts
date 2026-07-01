@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response } from "express";
 import colors from "colors";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -32,11 +32,11 @@ const __dirname1 = path.resolve();
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname1, "/frontend/build")));
 
-  app.get("*", (_req, res) =>
+  app.get("*", (_req: Request, res: Response) =>
     res.sendFile(path.resolve(__dirname1, "frontend", "build", "index.html"))
   );
 } else {
-  app.get("/", (_req, res) => {
+  app.get("/", (_req: Request, res: Response) => {
     res.send("Api is running Successfully");
   });
 }

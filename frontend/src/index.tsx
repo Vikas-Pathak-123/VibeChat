@@ -5,21 +5,37 @@ import App from "./App";
 import reportWebVitals from "./reportWebVitals";
 import { BrowserRouter } from "react-router-dom";
 import { ChakraProvider, ColorModeScript } from "@chakra-ui/react";
-import ChatProvider from "./context/ChatProvider";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import vibeChatTheme from "./theme";
+import { queryClient } from "./store";
 
+/**
+ * App entry point.
+ *
+ * Provider order (outermost → innermost):
+ * 1. ColorModeScript  — must be first to avoid flash of wrong theme
+ * 2. BrowserRouter    — routing context
+ * 3. QueryClientProvider — TanStack Query (server state)
+ * 4. ChakraProvider   — UI theme
+ *
+ * Note: ChatProvider has been removed. Auth + chat state now live in
+ * Zustand stores (useAuthStore, useChatStore) which are accessed directly
+ * in components without a Provider wrapper.
+ */
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
 root.render(
   <React.StrictMode>
-    {/* ColorModeScript persists theme preference in localStorage */}
     <ColorModeScript initialColorMode={vibeChatTheme.config.initialColorMode} />
     <BrowserRouter>
-      <ChatProvider>
+      <QueryClientProvider client={queryClient}>
         <ChakraProvider theme={vibeChatTheme}>
           <App />
         </ChakraProvider>
-      </ChatProvider>
+        {/* DevTools only in development — tree-shaken out of production build */}
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </BrowserRouter>
   </React.StrictMode>
 );

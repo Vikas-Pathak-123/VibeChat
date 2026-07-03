@@ -1,8 +1,8 @@
 # VibeChat — Claude Development Skill
 
 ## Project Overview
-VibeChat is a full-stack real-time chat application built with the MERN stack + Socket.IO.
-It follows an **Instagram-inspired UI** with dark/light theme support.
+VibeChat is a full-stack real-time chat application (MERN + Socket.IO + TypeScript).
+Instagram-inspired UI with dark/light theme. Roadmap targets a full social feed platform.
 
 ---
 
@@ -10,269 +10,296 @@ It follows an **Instagram-inspired UI** with dark/light theme support.
 
 ### Frontend
 - **React 18 + TypeScript** (strict mode)
-- **Chakra UI v2** — component library with custom theme
-- **Socket.IO Client** — real-time messaging
+- **TanStack Query v5** — all server/API state (fetching, caching, mutations)
+- **Zustand v4** — all client/UI state (selected chat, auth, socket)
+- **Chakra UI v2** — custom theme with semantic color tokens
+- **Socket.IO Client** — real-time messaging via Zustand socketStore
 - **React Router v6** — client-side routing
-- **Axios** — HTTP requests
+- **Axios** — HTTP via shared `apiClient` (never imported directly in components)
 
-### Backend
-- **Node.js + Express** — REST API
-- **MongoDB + Mongoose** — database
-- **Socket.IO** — WebSocket server
-- **JWT + bcryptjs** — auth
+### Backend (TypeScript)
+- **Node.js + Express + TypeScript** — compiled to `dist/` via `tsc`
+- **MongoDB + Mongoose** — typed models (`IUser`, `IChat`, `IMessage`)
+- **Socket.IO** — typed with `ClientToServerEvents` / `ServerToClientEvents`
+- **JWT + bcryptjs** — authentication
 - **Cloudinary** — image uploads
 
 ### Infrastructure
-- **Vercel** — frontend deployment (auto-deploys on merge to `main`)
-- **Render** — backend deployment
-- **GitHub Actions** — CI via Vercel bot
+- **Vercel** — frontend (auto-deploys on merge to `main`)
+- **Render** — backend (`npm run build && npm start`)
+- **Jira** — project management (vibecode.atlassian.net)
 
 ---
 
-## Project Structure
+## State Management Architecture — CRITICAL
+
+### Rule: Two types of state, two tools. Never mix them.
+
+| State Type | Tool | Examples |
+|---|---|---|
+| **Server state** (data from API) | TanStack Query | chat list, messages, user search results |
+| **Client/UI state** (no API) | Zustand | selected chat, socket connection, typing, auth user |
+
+### ❌ What we removed
+- `ChatProvider` React Context — **deleted**
+- Direct `axios` calls in components — **banned**
+- `socketRef` inside `SingleChat` — **deleted**
+
+---
+
+## Store Structure
 
 ```
-VibeChat/
-├── frontend/
-│   ├── .eslintrc.json          # ESLint rules — TypeScript + React
-│   ├── tsconfig.json           # TypeScript config (strict)
-│   └── src/
-│       ├── types/              # Shared TypeScript interfaces
-│       │   ├── user.types.ts
-│       │   ├── chat.types.ts
-│       │   ├── message.types.ts
-│       │   └── index.ts        # Barrel export — import from here
-│       ├── constants/
-│       │   └── api.constants.ts  # API_BASE_URL, SOCKET_ENDPOINT
-│       ├── theme/              # Chakra UI custom theme
-│       │   ├── index.ts        # Main theme export → vibeChatTheme
-│       │   ├── colors.ts       # Brand palette (#833AB4, #E1306C, #F77737)
-│       │   ├── typography.ts   # Inter font, size scale
-│       │   ├── components.ts   # Button/Input/Modal/Menu overrides
-│       │   └── foundations/
-│       │       ├── dark.ts     # Dark mode semantic tokens
-│       │       └── light.ts    # Light mode semantic tokens
-│       ├── context/
-│       │   └── ChatProvider.tsx  # Global state — user, chats, selectedChat, notification
-│       ├── config/
-│       │   └── ChatLogics.ts   # Pure helper functions — getSender, isSameSender etc.
-│       ├── components/
-│       │   ├── shared/
-│       │   │   ├── ThemeToggle.tsx    # Sun/moon dark-light toggle
-│       │   │   └── ChatLoading.tsx    # Skeleton loader
-│       │   ├── Authentication/
-│       │   │   ├── Login.tsx
-│       │   │   └── Signup.tsx
-│       │   ├── miscellaneous/
-│       │   │   ├── SideDrawer.tsx     # Top navbar + search drawer
-│       │   │   ├── ProfileModal.tsx
-│       │   │   ├── GroupChatModal.tsx
-│       │   │   └── UpdateGroupChatModal.tsx
-│       │   ├── userAvatar/
-│       │   │   ├── UserListItem.tsx
-│       │   │   └── UserBadgeItem.tsx
-│       │   ├── MyChats.tsx       # Left sidebar — chat list
-│       │   ├── Chatbox.tsx       # Right panel wrapper
-│       │   ├── SingleChat.tsx    # Chat header + message input + socket logic
-│       │   └── ScrollableChat.tsx  # Message bubbles renderer
-│       └── Pages/
-│           ├── Homepage.tsx      # Login/Signup page
-│           ├── Chatpage.tsx      # Main chat layout
-│           └── NotFoundPage.tsx
-└── backend/
-    ├── server.js               # Express + Socket.IO entry point
-    ├── config/db.js            # MongoDB connection
-    ├── models/                 # Mongoose schemas
-    ├── controllers/            # Route handlers
-    └── routes/                 # userRouts, chatRoutes, messageRoutes
+frontend/src/store/
+├── index.ts                  # Barrel export — import everything from here
+├── queryClient.ts            # Shared QueryClient (staleTime 30s, gcTime 5min)
+├── authStore.ts              # Zustand — user, isAuthLoading, setUser, logout
+├── chatStore.ts              # Zustand — selectedChat, notifications, typingChats
+├── socketStore.ts            # Zustand — Socket.IO lifecycle (connect once per session)
+├── keys/
+│   └── queryKeys.ts          # Centralised TanStack Query key factory
+└── api/
+    ├── apiClient.ts          # Shared axios instance with JWT interceptor
+    ├── userApi.ts            # loginUser, registerUser, searchUsers, updateUserProfile
+    ├── chatApi.ts            # fetchChats, accessOrCreateChat, createGroupChat ...
+    └── messageApi.ts         # fetchMessages, sendMessage
 ```
 
 ---
 
-## Theme System — CRITICAL
+## TanStack Query — Rules
 
-All components use **semantic color tokens**, never hardcoded hex values.
-
+### Always use queryKeys factory
 ```tsx
-// ✅ CORRECT — auto-switches with dark/light mode
-<Box bg="bg-surface" color="text-primary" borderColor="border-subtle">
+// ✅ CORRECT
+useQuery({ queryKey: queryKeys.chats.all(), queryFn: fetchChats })
+useQuery({ queryKey: queryKeys.messages.list(chatId), queryFn: () => fetchMessages(chatId) })
 
-// ❌ WRONG — hardcoded, breaks theme toggle
-<Box bg="#121212" color="#F5F5F5">
+// ❌ WRONG — magic strings break invalidation
+useQuery({ queryKey: ["chats"], queryFn: fetchChats })
 ```
 
-### Available Semantic Tokens
-
-| Token | Light | Dark | Usage |
-|-------|-------|------|-------|
-| `bg-app` | `#FAFAFA` | `#000000` | Page backgrounds |
-| `bg-surface` | `#FFFFFF` | `#121212` | Cards, panels, navbar |
-| `bg-elevated` | `#F0F0F0` | `#1C1C1C` | Hover states, selected items |
-| `bg-input` | `#EFEFEF` | `#262626` | Input fields |
-| `border-subtle` | `#DBDBDB` | `#262626` | Borders, dividers |
-| `border-strong` | `#B2B2B2` | `#363636` | Emphasis borders |
-| `text-primary` | `#262626` | `#F5F5F5` | Main text |
-| `text-secondary` | `#8E8E8E` | `#A8A8A8` | Subtext, labels |
-| `text-disabled` | `#C7C7C7` | `#555555` | Placeholders, hints |
-| `accent` | `#E1306C` | `#E1306C` | Brand pink — buttons, focus |
-| `accent-hover` | `#C1275C` | `#C1275C` | Button hover |
-| `bubble-sent` | `#EFEFEF` | `#262626` | Sent message bubbles |
-| `bubble-received` | `#FFFFFF` | `#1C1C1C` | Received message bubbles |
-| `online` | `#22C55E` | `#22C55E` | Online indicator dot |
-
-### Brand Gradient
+### Cache invalidation after mutations
 ```tsx
-bgGradient="linear(to-r, #833AB4, #E1306C, #F77737)"  // Instagram purple→pink→orange
-```
-
----
-
-## Component Rules
-
-### Button Variants
-```tsx
-<Button variant="primary">  // Gradient CTA — use for main actions
-<Button variant="nav">      // Ghost — use for navbar icons and secondary actions
-```
-
-### Input Variant
-```tsx
-<Input variant="insta">  // Applied by default via theme — dark/light aware
-```
-
-### Context Hook
-```tsx
-// ✅ Always use this hook — never import ChatContext directly
-import { useChatState } from "../context/ChatProvider";
-const { user, selectedChat, chats, notification } = useChatState();
-```
-
-### API Calls
-```tsx
-// ✅ Always use the constant — never hardcode the URL
-import { API_BASE_URL } from "../constants/api.constants";
-const { data } = await axios.get(`${API_BASE_URL}/api/chat`, {
-  headers: { Authorization: `Bearer ${user?.token}` },
+const { mutate } = useMutation({
+  mutationFn: sendMessage,
+  onSuccess: () => {
+    // Invalidate so message list refetches
+    queryClient.invalidateQueries({ queryKey: queryKeys.messages.list(chatId) });
+    // Invalidate so chat list "latest message" preview updates
+    queryClient.invalidateQueries({ queryKey: queryKeys.chats.all() });
+  },
 });
 ```
 
-### Type Imports
+### Import queryClient from store barrel
 ```tsx
-// ✅ Always import types from the barrel
-import { User, Chat, Message } from "../types";
-
-// ❌ Never import directly from type files
-import { User } from "../types/user.types";
+import { queryClient, queryKeys } from "../store";
 ```
 
 ---
 
-## ESLint Rules (Key)
+## Zustand — Rules
 
-| Rule | Level | Note |
-|------|-------|------|
-| `@typescript-eslint/no-unused-vars` | warn | Prefix with `_` to suppress |
-| `@typescript-eslint/no-explicit-any` | warn | Avoid — use proper types |
-| `react-hooks/rules-of-hooks` | error | Never break |
-| `react-hooks/exhaustive-deps` | warn | Add `// eslint-disable-next-line` with reason |
-| `prefer-const` | error | Always use const |
-| `no-var` | error | Never use var |
-| `eqeqeq` | error | Always use === |
-| `no-console` | warn | Use only console.warn / console.error |
+### Auth store
+```tsx
+import { useAuthStore } from "../store";
 
-### Run Lint Locally
-```bash
-cd frontend
-npm run lint        # Check all errors
-npm run lint:fix    # Auto-fix safe issues
+// In a component
+const user = useAuthStore((state) => state.user);
+const { setUser, logout } = useAuthStore();
+
+// After login — store handles localStorage persistence automatically
+setUser(data);
+
+// On logout
+logout(); // clears store + localStorage via persist middleware
 ```
+
+### Chat store
+```tsx
+import { useChatStore } from "../store";
+
+const selectedChat   = useChatStore((state) => state.selectedChat);
+const notifications  = useChatStore((state) => state.notifications);
+const { setSelectedChat, addNotification, clearNotification } = useChatStore();
+```
+
+### Socket store
+```tsx
+import { useSocketStore } from "../store";
+
+// Connect once — call on login success
+const { connect } = useSocketStore();
+connect(user);
+
+// In SingleChat
+const { joinRoom, emitTyping, emitStopTyping, emitNewMessage } = useSocketStore();
+joinRoom(selectedChat._id);
+emitNewMessage(data);
+
+// On logout
+const { disconnect } = useSocketStore();
+disconnect();
+```
+
+### Subscribe to a single field (performance — avoids re-renders)
+```tsx
+// ✅ Fine-grained selector — component only re-renders when selectedChat changes
+const selectedChat = useChatStore((state) => state.selectedChat);
+
+// ❌ Whole store — re-renders on ANY store change
+const store = useChatStore();
+```
+
+---
+
+## API Layer — Rules
+
+### Never import axios in components
+```tsx
+// ✅ CORRECT
+import { fetchChats, sendMessage } from "../store";
+useQuery({ queryKey: queryKeys.chats.all(), queryFn: fetchChats })
+
+// ❌ WRONG
+import axios from "axios";
+const { data } = await axios.get("/api/chat");
+```
+
+### Never hardcode API URL
+```tsx
+// ✅ All API calls go through apiClient which has baseURL set
+// ❌ Never
+axios.get("https://vibechat-177v.onrender.com/api/chat")
+```
+
+---
+
+## Theme — Semantic Tokens (still applies)
+
+Always use semantic tokens, never hardcoded hex:
+
+| Token | Usage |
+|---|---|
+| `bg-app` | Page background |
+| `bg-surface` | Cards, panels, navbar |
+| `bg-elevated` | Hover, selected items |
+| `bg-input` | Input fields |
+| `border-subtle` | Borders, dividers |
+| `text-primary` | Main text |
+| `text-secondary` | Labels, subtext |
+| `text-disabled` | Placeholders |
+| `accent` | Brand pink `#E1306C` |
+| `online` | Green presence dot |
+
+Brand gradient: `bgGradient="linear(to-r, #833AB4, #E1306C, #F77737)"`
 
 ---
 
 ## Git Workflow
 
-### Branch Naming
+### Branch naming
 ```
 VIB-{ticket}-{short-description}
-e.g. VIB-4-profile-settings-ui
+e.g. VIB-19-auth-tanstack
 ```
 
-### Commit Message Format
+### Commit message
 ```
 VIB-{ticket}: {imperative sentence}
-e.g. VIB-4: Add profile avatar upload with Cloudinary
+e.g. VIB-19: Migrate Login to useMutation + useAuthStore
 ```
 
-This format auto-links commits to Jira tickets.
+Ticket key auto-links commit to Jira.
 
-### PR Order (always merge in this order)
-Foundation tickets must merge before feature tickets that depend on them.
+### Merge order — Sprint 1 dependency chain
+```
+VIB-18 (stores + query client) → merge first
+VIB-19 (auth migration)        → depends on VIB-18
+VIB-20 (chat/message migration) → depends on VIB-18, VIB-19
+VIB-21 (socket store wired up) → depends on VIB-18, VIB-20
+```
+
+---
+
+## ESLint — Key Rules
+
+| Rule | Level |
+|---|---|
+| `@typescript-eslint/no-unused-vars` | warn (prefix `_` to suppress) |
+| `no-duplicate-imports` | error |
+| `prefer-const` | error |
+| `no-var` | error |
+| `eqeqeq` | error |
+
+Run locally: `cd frontend && npm run lint`
+
+---
+
+## API Reference
+
+### Users
+| Method | Endpoint | Function |
+|---|---|---|
+| POST | `/api/user` | `registerUser()` |
+| POST | `/api/user/login` | `loginUser()` |
+| GET | `/api/user?search=` | `searchUsers()` |
+| PUT | `/api/user/profile` | `updateUserProfile()` |
+
+### Chats
+| Method | Endpoint | Function |
+|---|---|---|
+| GET | `/api/chat` | `fetchChats()` |
+| POST | `/api/chat` | `accessOrCreateChat()` |
+| POST | `/api/chat/group` | `createGroupChat()` |
+| PUT | `/api/chat/rename` | `renameGroupChat()` |
+| PUT | `/api/chat/groupadd` | `addToGroupChat()` |
+| PUT | `/api/chat/groupremove` | `removeFromGroupChat()` |
+
+### Messages
+| Method | Endpoint | Function |
+|---|---|---|
+| GET | `/api/message/:chatId` | `fetchMessages()` |
+| POST | `/api/message` | `sendMessage()` |
+
+---
+
+## Socket.IO Events
+
+| Event | Direction | Triggered by |
+|---|---|---|
+| `setup` | Client→Server | `socketStore.connect()` |
+| `join chat` | Client→Server | `socketStore.joinRoom()` |
+| `new message` | Client→Server | `socketStore.emitNewMessage()` |
+| `message recieved` | Server→Client | `socketStore` → invalidates TanStack Query |
+| `typing` | Client→Server | `socketStore.emitTyping()` |
+| `stop typing` | Client→Server | `socketStore.emitStopTyping()` |
+
+---
+
+## Common Mistakes to Avoid
+
+1. Never import `axios` directly in components — use `store/api/*` functions
+2. Never write to `localStorage` for auth — `useAuthStore.setUser()` handles it
+3. Never use magic query key strings — always use `queryKeys.*`
+4. Never connect the socket inside a component — call `socketStore.connect()` once on login
+5. Never put server state (API data) in Zustand — that is TanStack Query's job
+6. Never put UI state (selected chat, typing) in TanStack Query — that is Zustand's job
+7. Never import from type files directly — use `../types` barrel
+8. Never hardcode hex colors — use semantic tokens
+9. Always `invalidateQueries` after mutations that affect list views
+10. Never branch from an unmerged branch — always branch from `main`
 
 ---
 
 ## Jira Board
 https://vibecode.atlassian.net/jira/software/projects/VIB/boards/2
 
-| Ticket | Description | Priority |
-|--------|-------------|----------|
-| VIB-6 | Theme Foundation + TS Migration | ✅ Done |
-| VIB-1 | Login & Signup UI | ✅ Done |
-| VIB-2 | Chat Sidebar | ✅ Done |
-| VIB-3 | Chat Bubbles & Message UI | 🔁 In Progress |
-| VIB-4 | Profile & Settings | ⏳ Todo |
-| VIB-5 | Mobile Responsiveness | ⏳ Todo |
-
----
-
-## API Endpoints
-
-### Users
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/user` | Register |
-| POST | `/api/user/login` | Login |
-| GET | `/api/user?search=` | Search users |
-
-### Chats
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/chat` | Access/create 1:1 chat |
-| GET | `/api/chat` | Get all chats for user |
-| POST | `/api/chat/group` | Create group chat |
-| PUT | `/api/chat/rename` | Rename group |
-| PUT | `/api/chat/groupadd` | Add member |
-| PUT | `/api/chat/groupremove` | Remove member |
-
-### Messages
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/message` | Send message |
-| GET | `/api/message/:chatId` | Get messages |
-
----
-
-## Socket.IO Events
-
-| Event | Direction | Description |
-|-------|-----------|-------------|
-| `setup` | Client→Server | Join personal room |
-| `join chat` | Client→Server | Join chat room |
-| `new message` | Client→Server | Broadcast new message |
-| `message recieved` | Server→Client | Receive message |
-| `typing` | Client→Server | Start typing indicator |
-| `stop typing` | Client→Server | Stop typing indicator |
-
----
-
-## Common Mistakes to Avoid
-
-1. **Never hardcode hex colors** — always use semantic tokens
-2. **Never import from type files directly** — use barrel `../types`
-3. **Never hardcode API URL** — use `API_BASE_URL` constant
-4. **Never use `ChatState()`** — use `useChatState()` hook
-5. **Never add unused imports** — ESLint will fail the CI build
-6. **Never use `var`** — use `const` or `let`
-7. **Always type function return types** on async functions: `Promise<void>`
-8. **Always use `finally`** in try/catch for loading state cleanup
-9. **Branch from `main`** — never branch from an unmerged feature branch
-10. **Merge VIB-6 before any feature ticket** — it is the foundation
+### Sprint 1 (Active)
+| Ticket | Summary | Status |
+|---|---|---|
+| VIB-18 | TanStack Query + Zustand Setup | 🔁 In Progress |
+| VIB-19 | Auth migration to useAuthStore + useMutation | ⏳ Todo |
+| VIB-20 | Chat/Message migration to TanStack Query | ⏳ Todo |
+| VIB-21 | Socket.IO → socketStore (single connection) | ⏳ Todo |

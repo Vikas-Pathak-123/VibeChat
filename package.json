@@ -5,7 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc -p backend",
+    "build:frontend": "npm install --prefix frontend && npm run build --prefix frontend",
+    "build:backend": "tsc -p backend",
+    "build": "npm run build:frontend && npm run build:backend",
     "start": "node backend/dist/server.js",
     "server": "nodemon --watch backend --ext ts --exec ts-node --files backend/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -4,11 +4,19 @@ import { Input, InputGroup, InputRightElement } from "@chakra-ui/input";
 import { VStack } from "@chakra-ui/layout";
 import { useState } from "react";
 import { Progress, Text, Box, useToast } from "@chakra-ui/react";
-import axios from "axios";
-import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../constants/api.constants";
-import { useChatState } from "../../context/ChatProvider";
+import { useRegisterMutation } from "../../hooks/useAuthMutations";
 
+/**
+ * Signup component.
+ *
+ * State management:
+ * - Form fields + upload state: local useState (ephemeral)
+ * - Register API call: useRegisterMutation (TanStack Query mutation)
+ * - Auth user after register: useAuthStore (set inside mutation.onSuccess)
+ *
+ * Cloudinary upload stays as a direct fetch — it is a third-party service,
+ * not our API, so it does not go through apiClient or TanStack Query.
+ */
 const Signup: React.FC = () => {
   const [show, setShow]                       = useState<boolean>(false);
   const [name, setName]                       = useState<string>("");
@@ -18,20 +26,20 @@ const Signup: React.FC = () => {
   const [pic, setPic]                         = useState<string>("");
   const [picLoading, setPicLoading]           = useState<boolean>(false);
   const [uploadProgress, setUploadProgress]   = useState<number>(0);
-  const navigate  = useNavigate();
-  const toast     = useToast();
-  const { setUser } = useChatState();
+  const toast = useToast();
+
+  const { mutate: register, isPending } = useRegisterMutation();
 
   const getStrength = (): { value: number; label: string; color: string } => {
     if (!password) return { value: 0, label: "", color: "gray" };
-    if (password.length < 4)  return { value: 25, label: "Weak",   color: "red" };
-    if (password.length < 7)  return { value: 50, label: "Fair",   color: "orange" };
-    if (password.length < 10) return { value: 75, label: "Good",   color: "yellow" };
-    return { value: 100, label: "Strong 💪", color: "green" };
+    if (password.length < 4)  return { value: 25, label: "Weak",      color: "red" };
+    if (password.length < 7)  return { value: 50, label: "Fair",      color: "orange" };
+    if (password.length < 10) return { value: 75, label: "Good",      color: "yellow" };
+    return                           { value: 100, label: "Strong 💪", color: "green" };
   };
   const strength = getStrength();
 
-  const submitHandler = async (): Promise<void> => {
+  const submitHandler = (): void => {
     if (!name || !email || !password || !confirmPassword) {
       toast({ title: "Please fill all fields", status: "warning", duration: 4000, isClosable: true, position: "top" });
       return;
@@ -40,25 +48,7 @@ const Signup: React.FC = () => {
       toast({ title: "Passwords do not match", status: "error", duration: 4000, isClosable: true, position: "top" });
       return;
     }
-    try {
-      setPicLoading(true);
-      const { data } = await axios.post(`${API_BASE_URL}/api/user`, { name, email, password, pic });
-      toast({ title: `Welcome to VibeChat, ${data.name}! 🎉`, status: "success", duration: 4000, isClosable: true, position: "top" });
-      // Update localStorage AND context simultaneously
-      localStorage.setItem("userInfo", JSON.stringify(data));
-      setUser(data);
-      navigate("/chats");
-    } catch (error) {
-      let message = "An unexpected error occurred";
-      if (axios.isAxiosError(error)) {
-        message = error.response?.data?.message || error.message;
-      } else if (error instanceof Error) {
-        message = error.message;
-      }
-      toast({ title: "Registration failed", description: message, status: "error", duration: 4000, isClosable: true, position: "top" });
-    } finally {
-      setPicLoading(false);
-    }
+    register({ name, email, password, pic });
   };
 
   const postDetails = (file: File | undefined): void => {
@@ -80,7 +70,9 @@ const Signup: React.FC = () => {
         setUploadProgress(100);
         toast({ title: "Photo uploaded ✅", status: "success", duration: 3000, isClosable: true, position: "top" });
       })
-      .catch(() => toast({ title: "Upload failed", status: "error", duration: 4000, isClosable: true, position: "top" }))
+      .catch(() =>
+        toast({ title: "Upload failed", status: "error", duration: 4000, isClosable: true, position: "top" })
+      )
       .finally(() => setPicLoading(false));
   };
 
@@ -106,11 +98,16 @@ const Signup: React.FC = () => {
       <FormControl isRequired>
         <FormLabel color="text-secondary" fontSize="sm">Password</FormLabel>
         <InputGroup size="lg">
-          <Input type={show ? "text" : "password"} placeholder="Create a password"
-            onChange={(e) => setPassword(e.target.value)} {...inputStyles} />
+          <Input
+            type={show ? "text" : "password"}
+            placeholder="Create a password"
+            onChange={(e) => setPassword(e.target.value)}
+            {...inputStyles}
+          />
           <InputRightElement width="4.5rem">
             <Button h="1.75rem" size="sm" onClick={() => setShow(!show)}
-              variant="ghost" color="text-secondary">{show ? "Hide" : "Show"}
+              variant="ghost" color="text-secondary">
+              {show ? "Hide" : "Show"}
             </Button>
           </InputRightElement>
         </InputGroup>
@@ -125,14 +122,17 @@ const Signup: React.FC = () => {
       <FormControl isRequired>
         <FormLabel color="text-secondary" fontSize="sm">Confirm Password</FormLabel>
         <InputGroup size="lg">
-          <Input type={show ? "text" : "password"} placeholder="Confirm password"
+          <Input
+            type={show ? "text" : "password"}
+            placeholder="Confirm password"
             onChange={(e) => setConfirmPassword(e.target.value)}
             {...inputStyles}
             borderColor={confirmPassword && confirmPassword !== password ? "red.400" : "border-subtle"}
           />
           <InputRightElement width="4.5rem">
             <Button h="1.75rem" size="sm" onClick={() => setShow(!show)}
-              variant="ghost" color="text-secondary">{show ? "Hide" : "Show"}
+              variant="ghost" color="text-secondary">
+              {show ? "Hide" : "Show"}
             </Button>
           </InputRightElement>
         </InputGroup>
@@ -143,7 +143,8 @@ const Signup: React.FC = () => {
 
       <FormControl>
         <FormLabel color="text-secondary" fontSize="sm">Profile Picture (optional)</FormLabel>
-        <Input type="file" p={1.5} accept="image/*"
+        <Input
+          type="file" p={1.5} accept="image/*"
           onChange={(e) => postDetails(e.target.files?.[0])}
           bg="bg-input" border="1px solid" borderColor="border-subtle"
           color="text-secondary" borderRadius="8px" size="lg"
@@ -155,8 +156,14 @@ const Signup: React.FC = () => {
         {uploadProgress === 100 && <Text fontSize="xs" color="green.400" mt={1}>✅ Uploaded</Text>}
       </FormControl>
 
-      <Button w="100%" size="lg" mt={2} onClick={submitHandler}
-        isLoading={picLoading} loadingText="Creating account..." variant="primary">
+      <Button
+        w="100%" size="lg" mt={2}
+        onClick={submitHandler}
+        isLoading={isPending || picLoading}
+        loadingText={picLoading ? "Uploading photo..." : "Creating account..."}
+        variant="primary"
+        isDisabled={picLoading}
+      >
         Create Account 🚀
       </Button>
     </VStack>

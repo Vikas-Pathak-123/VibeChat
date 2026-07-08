@@ -1,27 +1,36 @@
-import { Box, Container, Tab, TabList, TabPanel, TabPanels, Tabs, Text } from "@chakra-ui/react";
+import {
+  Box, Container, Tab, TabList, TabPanel,
+  TabPanels, Tabs, Text,
+} from "@chakra-ui/react";
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Login from "../components/Authentication/Login";
 import Signup from "../components/Authentication/Signup";
 import ThemeToggle from "../components/shared/ThemeToggle";
+import { useAuthStore } from "../store/authStore";
 
+/**
+ * Homepage — Login / Signup page.
+ *
+ * Reads auth state from Zustand authStore (not localStorage directly).
+ * Redirects to /chats if user is already logged in.
+ */
 const Homepage: React.FC = () => {
-  const navigate = useNavigate();
+  const navigate            = useNavigate();
+  const { user, isAuthLoading } = useAuthStore();
 
   useEffect(() => {
-    const user = localStorage.getItem("userInfo");
-    if (user) navigate("/chats");
-  }, [navigate]);
+    // Wait for Zustand persist rehydration before checking
+    if (!isAuthLoading && user) navigate("/chats");
+  }, [user, isAuthLoading, navigate]);
 
   return (
     <Box minH="100vh" bg="bg-app" display="flex" alignItems="center" justifyContent="center" px={4}>
       <Container maxW="md" py={10}>
-        {/* Theme Toggle */}
         <Box display="flex" justifyContent="flex-end" mb={4}>
           <ThemeToggle />
         </Box>
 
-        {/* Brand */}
         <Box textAlign="center" mb={8}>
           <Text
             fontSize="4xl" fontWeight="bold"
@@ -33,7 +42,6 @@ const Homepage: React.FC = () => {
           <Text color="text-secondary" fontSize="sm" mt={1}>Connect. Chat. Vibe.</Text>
         </Box>
 
-        {/* Auth Card */}
         <Box
           bg="bg-surface" borderRadius="2xl"
           border="1px solid" borderColor="border-subtle"
@@ -41,10 +49,16 @@ const Homepage: React.FC = () => {
         >
           <Tabs isFitted variant="soft-rounded" colorScheme="pink">
             <TabList mb={6} bg="bg-elevated" borderRadius="xl" p={1}>
-              <Tab color="text-secondary" _selected={{ bgGradient: "linear(to-r, #833AB4, #E1306C)", color: "white", fontWeight: "bold" }}>
+              <Tab
+                color="text-secondary"
+                _selected={{ bgGradient: "linear(to-r, #833AB4, #E1306C)", color: "white", fontWeight: "bold" }}
+              >
                 Login
               </Tab>
-              <Tab color="text-secondary" _selected={{ bgGradient: "linear(to-r, #833AB4, #E1306C)", color: "white", fontWeight: "bold" }}>
+              <Tab
+                color="text-secondary"
+                _selected={{ bgGradient: "linear(to-r, #833AB4, #E1306C)", color: "white", fontWeight: "bold" }}
+              >
                 Sign Up
               </Tab>
             </TabList>

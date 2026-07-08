@@ -3,13 +3,21 @@ import { Box, Spinner, Center } from "@chakra-ui/react";
 import Chatbox from "../components/Chatbox";
 import MyChats from "../components/MyChats";
 import SideDrawer from "../components/miscellaneous/SideDrawer";
-import { useChatState } from "../context/ChatProvider";
+import { useAuthStore } from "../store/authStore";
 
+/**
+ * Chatpage — Main chat layout.
+ *
+ * Reads auth state from Zustand authStore.
+ * isAuthLoading: true until Zustand persist middleware rehydrates from localStorage.
+ * Shows spinner during rehydration to prevent blank screen flash.
+ *
+ * No useChatState. No ChatProvider dependency.
+ */
 const Chatpage: React.FC = () => {
-  const [fetchAgain, setFetchAgain] = useState<boolean>(false);
-  const { user, isAuthLoading } = useChatState();
+  const [fetchAgain, setFetchAgain]     = useState<boolean>(false);
+  const { user, isAuthLoading }         = useAuthStore();
 
-  // Wait until auth state is resolved from localStorage
   if (isAuthLoading) {
     return (
       <Center minH="100vh" bg="bg-app">

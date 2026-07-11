@@ -38,8 +38,8 @@
     "no-var": "error",
     // Consistent use of === over ==
     "eqeqeq": ["error", "always"],
-    // No duplicate imports
-    "no-duplicate-imports": "error",
+    // No duplicate imports (using import plugin version for autofix support)
+    "import/no-duplicates": "error",
 
     // ── CI Safety ───────────────────────────────────────────────────────────
     // These are OFF to prevent CI failures on warnings

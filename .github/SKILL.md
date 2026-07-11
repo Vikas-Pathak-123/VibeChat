@@ -228,7 +228,7 @@ VIB-21 (socket store wired up) → depends on VIB-18, VIB-20
 | Rule | Level |
 |---|---|
 | `@typescript-eslint/no-unused-vars` | warn (prefix `_` to suppress) |
-| `no-duplicate-imports` | error |
+| `import/no-duplicates` | error (autofixable via `npm run lint:fix`) |
 | `prefer-const` | error |
 | `no-var` | error |
 | `eqeqeq` | error |
@@ -290,6 +290,7 @@ Run locally: `cd frontend && npm run lint`
 8. Never hardcode hex colors — use semantic tokens
 9. Always `invalidateQueries` after mutations that affect list views
 10. Never branch from an unmerged branch — always branch from `main`
+11. Never use duplicate import statements from the same module — combine them into a single import statement (e.g. from `../../store`), which is autofixable by `npm run lint:fix`
 
 ---
 

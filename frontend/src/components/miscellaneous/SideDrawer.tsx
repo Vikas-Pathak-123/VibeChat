@@ -23,8 +23,7 @@ import { User } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useSocketStore } from "../../store/socketStore";
-import { searchUsers, accessOrCreateChat } from "../../store";
-import { queryClient, queryKeys } from "../../store";
+import { searchUsers, accessOrCreateChat, queryClient, queryKeys } from "../../store";
 
 /**
  * SideDrawer — Top navigation bar + search drawer + logout dialog.
@@ -44,7 +43,7 @@ const SideDrawer: React.FC = () => {
   const [searchResult, setSearchResult] = useState<User[]>([]);
 
   const { user, logout }                        = useAuthStore();
-  const { selectedChat, notifications,
+  const { notifications,
           setSelectedChat, clearNotification }  = useChatStore();
   const { disconnect }                          = useSocketStore();
   const toast                                   = useToast();

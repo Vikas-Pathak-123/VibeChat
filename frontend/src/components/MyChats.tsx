@@ -10,16 +10,15 @@ import ChatLoading from "./shared/ChatLoading";
 import GroupChatModal from "./miscellaneous/GroupChatModal";
 import { useChatState } from "../context/ChatProvider";
 import { API_BASE_URL } from "../constants/api.constants";
-import { User } from "../types";
 
 interface MyChatsProps {
   fetchAgain: boolean;
 }
 
 const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
-  const [loggedUser, setLoggedUser]   = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const { selectedChat, setSelectedChat, user, chats, setChats } = useChatState();
+  const loggedUser = user;
   const toast = useToast();
 
   const fetchChats = async (): Promise<void> => {
@@ -34,8 +33,6 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
   };
 
   useEffect(() => {
-    const stored = localStorage.getItem("userInfo");
-    setLoggedUser(stored ? JSON.parse(stored) : null);
     fetchChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fetchAgain]);

@@ -33,9 +33,11 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
   };
 
   useEffect(() => {
-    fetchChats();
+    if (user) {
+      fetchChats();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchAgain]);
+  }, [fetchAgain, user]);
 
   const filteredChats = chats.filter((chat) => {
     if (!loggedUser) return false;

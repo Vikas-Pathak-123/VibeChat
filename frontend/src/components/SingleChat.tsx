@@ -39,14 +39,14 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
 
   // ── Socket initialisation ──────────────────────────────────────────────────
   useEffect(() => {
+    if (!user) return;
     socketRef.current = io(SOCKET_ENDPOINT);
     socketRef.current.emit("setup", user);
     socketRef.current.on("connected",   () => setSocketConnected(true));
     socketRef.current.on("typing",      () => setIsTyping(true));
     socketRef.current.on("stop typing", () => setIsTyping(false));
     return () => { socketRef.current?.disconnect(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   // ── Fetch messages when selected chat changes ──────────────────────────────
   useEffect(() => {

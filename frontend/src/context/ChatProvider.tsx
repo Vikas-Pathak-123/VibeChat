@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Chat, Message } from "../types";
+import { useAuthStore } from "../store/authStore";
 
 interface ChatContextType {
   selectedChat: Chat | null;
@@ -21,17 +22,16 @@ const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
   const [user, setUser]                 = useState<User | null>(null);
   const [notification, setNotification] = useState<Message[]>([]);
   const [chats, setChats]               = useState<Chat[]>([]);
-  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
   const navigate = useNavigate();
+  const { user: authUser, isAuthLoading: authLoading } = useAuthStore();
 
   useEffect(() => {
-    const stored = localStorage.getItem("userInfo");
-    const userInfo: User | null = stored ? JSON.parse(stored) : null;
-    setUser(userInfo);
-    setIsAuthLoading(false);
-    if (!userInfo) navigate("/");
-  }, [navigate]);
+    if (!authLoading) {
+      setUser(authUser);
+      if (!authUser) navigate("/");
+    }
+  }, [authUser, authLoading, navigate]);
 
   return (
     <ChatContext.Provider
@@ -40,7 +40,7 @@ const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => 
         user, setUser,
         notification, setNotification,
         chats, setChats,
-        isAuthLoading,
+        isAuthLoading: authLoading,
       }}
     >
       {children}

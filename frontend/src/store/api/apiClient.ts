@@ -1,6 +1,8 @@
 import axios from "axios";
 import { API_BASE_URL } from "../../constants/api.constants";
 
+import { useAuthStore } from "../authStore";
+
 /**
  * Shared Axios instance used by all TanStack Query fetch functions.
  *
@@ -18,10 +20,9 @@ const apiClient = axios.create({
 
 // Attach JWT token on every outgoing request
 apiClient.interceptors.request.use((config) => {
-  const stored = localStorage.getItem("userInfo");
-  if (stored) {
-    const { token } = JSON.parse(stored) as { token: string };
-    config.headers.Authorization = `Bearer ${token}`;
+  const user = useAuthStore.getState().user;
+  if (user?.token) {
+    config.headers.Authorization = `Bearer ${user.token}`;
   }
   return config;
 });

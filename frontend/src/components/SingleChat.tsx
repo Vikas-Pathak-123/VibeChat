@@ -5,14 +5,15 @@ import {
   InputRightElement, Spinner, useToast,
 } from "@chakra-ui/react";
 import { ArrowBackIcon, AttachmentIcon } from "@chakra-ui/icons";
-import { useState, useEffect, useRef } from "react";
-import axios from "axios";
-import { io, Socket } from "socket.io-client";
+import { useState, useCallback } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { getSenderFull } from "../config/ChatLogics";
-import { useChatState } from "../context/ChatProvider";
-import { API_BASE_URL, SOCKET_ENDPOINT } from "../constants/api.constants";
-import { Message, Chat } from "../types";
+import { useAuthStore } from "../store/authStore";
+import { useChatStore } from "../store/chatStore";
+import { useSocketStore } from "../store/socketStore";
+import { fetchMessages, sendMessage, queryKeys, queryClient } from "../store";
+import { Message } from "../types";
 import ScrollableChat from "./ScrollableChat";
 import ProfileModal from "./miscellaneous/ProfileModal";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
@@ -22,100 +23,88 @@ interface SingleChatProps {
   setFetchAgain: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-// Tracks selected chat outside React state to avoid stale closure in socket listener
-let selectedChatCompare: Chat | null;
-
+/**
+ * SingleChat — Chat header, message list, typing indicator, message input.
+ *
+ * Server state:
+ *   - useQuery(fetchMessages) — message list, keyed by chatId
+ *   - useMutation(sendMessage) — send new message
+ *
+ * Client state:
+ *   - useChatStore — selectedChat, setSelectedChat, typingChats
+ *   - useAuthStore — user
+ *   - useSocketStore — joinRoom, emitTyping, emitStopTyping, emitNewMessage
+ *
+ * Socket connection lifecycle (connect/disconnect) is handled in
+ * useAuthMutations (VIB-19) — SingleChat only consumes the socket.
+ *
+ * fetchAgain / setFetchAgain props retained for UpdateGroupChatModal
+ * compatibility. Will be removed in VIB-21 when socketStore handles
+ * all cache invalidation directly.
+ */
 const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) => {
-  const [messages, setMessages]               = useState<Message[]>([]);
-  const [loading, setLoading]                 = useState<boolean>(false);
-  const [newMessage, setNewMessage]           = useState<string>("");
-  const [socketConnected, setSocketConnected] = useState<boolean>(false);
-  const [typing, setTyping]                   = useState<boolean>(false);
-  const [isTyping, setIsTyping]               = useState<boolean>(false);
+  const [newMessage, setNewMessage] = useState<string>("");
+  const [typing, setTyping]         = useState<boolean>(false);
 
-  const socketRef = useRef<Socket | null>(null);
-  const toast     = useToast();
-  const { selectedChat, setSelectedChat, user, notification, setNotification } = useChatState();
+  const toast                              = useToast();
+  const { user }                           = useAuthStore();
+  const { selectedChat, setSelectedChat, typingChats } = useChatStore();
+  const { joinRoom, emitTyping, emitStopTyping, emitNewMessage } = useSocketStore();
 
-  // ── Socket initialisation ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (!user) return;
-    socketRef.current = io(SOCKET_ENDPOINT);
-    socketRef.current.emit("setup", user);
-    socketRef.current.on("connected",   () => setSocketConnected(true));
-    socketRef.current.on("typing",      () => setIsTyping(true));
-    socketRef.current.on("stop typing", () => setIsTyping(false));
-    return () => { socketRef.current?.disconnect(); };
-  }, [user]);
+  const isTyping = selectedChat ? (typingChats[selectedChat._id] ?? false) : false;
 
-  // ── Fetch messages when selected chat changes ──────────────────────────────
-  useEffect(() => {
-    fetchMessages();
-    selectedChatCompare = selectedChat;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedChat]);
-
-  // ── Incoming message listener ──────────────────────────────────────────────
-  useEffect(() => {
-    socketRef.current?.on("message recieved", (newMsg: Message) => {
-      if (!selectedChatCompare || selectedChatCompare._id !== newMsg.chat._id) {
-        if (!notification.includes(newMsg)) {
-          setNotification([newMsg, ...notification]);
-          setFetchAgain(!fetchAgain);
-        }
-      } else {
-        setMessages((prev) => [...prev, newMsg]);
-      }
-    });
+  // ── Fetch messages ─────────────────────────────────────────────────────────
+  const {
+    data: messages = [],
+    isLoading,
+  } = useQuery({
+    queryKey: queryKeys.messages.list(selectedChat?._id ?? ""),
+    queryFn: () => fetchMessages(selectedChat!._id),
+    enabled: !!selectedChat,
+    // Join socket room whenever messages load for a new chat
+    select: useCallback((data: Message[]) => {
+      if (selectedChat) joinRoom(selectedChat._id);
+      return data;
+    }, [selectedChat, joinRoom]),
   });
 
-  const fetchMessages = async (): Promise<void> => {
-    if (!selectedChat) return;
-    try {
-      setLoading(true);
-      const { data } = await axios.get(
-        `${API_BASE_URL}/api/message/${selectedChat._id}`,
-        { headers: { Authorization: `Bearer ${user?.token}` } }
+  // ── Send message mutation ──────────────────────────────────────────────────
+  const { mutate: doSendMessage } = useMutation({
+    mutationFn: sendMessage,
+    onSuccess: (newMsg) => {
+      // Optimistically append to cache instead of full refetch
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.list(selectedChat!._id),
+        (old = []) => [...old, newMsg]
       );
-      setMessages(data);
-      socketRef.current?.emit("join chat", selectedChat._id);
-    } catch {
-      toast({ title: "Failed to load messages", status: "error", duration: 5000, isClosable: true, position: "bottom" });
-    } finally {
-      setLoading(false);
-    }
-  };
+      // Broadcast to other participants via socket
+      emitNewMessage(newMsg);
+      // Invalidate chat list so "latest message" preview updates
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all() });
+    },
+    onError: () =>
+      toast({ title: "Failed to send message", status: "error", duration: 5000, isClosable: true, position: "bottom" }),
+  });
 
-  const sendMessage = async (e: React.KeyboardEvent<HTMLInputElement>): Promise<void> => {
-    if (e.key !== "Enter" || !newMessage.trim()) return;
-    socketRef.current?.emit("stop typing", selectedChat?._id);
+  const sendHandler = (e: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (e.key !== "Enter" || !newMessage.trim() || !selectedChat) return;
+    emitStopTyping(selectedChat._id);
     const content = newMessage.trim();
-    setNewMessage(""); // clear before API call to prevent double send
-    try {
-      const { data } = await axios.post(
-        `${API_BASE_URL}/api/message`,
-        { content, chatId: selectedChat?._id },
-        { headers: { Authorization: `Bearer ${user?.token}` } }
-      );
-      socketRef.current?.emit("new message", data);
-      setMessages((prev) => [...prev, data]);
-    } catch {
-      toast({ title: "Failed to send message", status: "error", duration: 5000, isClosable: true, position: "bottom" });
-    }
+    setNewMessage(""); // clear before mutation — prevent double-send on slow networks
+    doSendMessage({ content, chatId: selectedChat._id });
   };
 
   const typingHandler = (e: React.ChangeEvent<HTMLInputElement>): void => {
     setNewMessage(e.target.value);
-    if (!socketConnected) return;
+    if (!selectedChat) return;
     if (!typing) {
       setTyping(true);
-      socketRef.current?.emit("typing", selectedChat?._id);
+      emitTyping(selectedChat._id);
     }
-    const lastTypingTime = new Date().getTime();
+    const lastTypingTime = Date.now();
     setTimeout(() => {
-      const timeDiff = new Date().getTime() - lastTypingTime;
-      if (timeDiff >= 3000 && typing) {
-        socketRef.current?.emit("stop typing", selectedChat?._id);
+      if (Date.now() - lastTypingTime >= 3000 && typing) {
+        emitStopTyping(selectedChat._id);
         setTyping(false);
       }
     }, 3000);
@@ -133,9 +122,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         <Text color="text-secondary" fontSize="md" fontWeight="medium">
           Select a conversation to start chatting
         </Text>
-        <Text color="text-disabled" fontSize="sm">
-          Your messages are waiting
-        </Text>
+        <Text color="text-disabled" fontSize="sm">Your messages are waiting</Text>
       </Box>
     );
   }
@@ -160,16 +147,14 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
             aria-label="Back"
             display={{ base: "flex", md: "none" }}
             icon={<ArrowBackIcon />}
-            variant="nav" size="sm"
-            flexShrink={0}
+            variant="nav" size="sm" flexShrink={0}
             onClick={() => setSelectedChat(null)}
           />
           <Avatar
             size="sm"
             name={selectedChat.isGroupChat ? selectedChat.chatName : chatPartner?.name}
             src={chatPartner?.picture ?? undefined}
-            bg="accent"
-            flexShrink={0}
+            bg="accent" flexShrink={0}
           />
           <Box minW={0} overflow="hidden">
             <Text fontWeight="bold" color="text-primary" fontSize="md" lineHeight="1.2" isTruncated>
@@ -188,7 +173,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         <Box flexShrink={0}>
           {selectedChat.isGroupChat
             ? <UpdateGroupChatModal
-                fetchMessages={fetchMessages}
+                fetchMessages={() => queryClient.invalidateQueries({ queryKey: queryKeys.messages.list(selectedChat._id) })}
                 fetchAgain={fetchAgain}
                 setFetchAgain={setFetchAgain}
               />
@@ -199,7 +184,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
 
       {/* ── Messages Area ───────────────────────────────────────────────── */}
       <Box flex="1" overflowY="hidden" px={2} py={2} bg="bg-app">
-        {loading ? (
+        {isLoading ? (
           <Box display="flex" h="100%" alignItems="center" justifyContent="center">
             <Spinner size="xl" color="accent" thickness="3px" />
           </Box>
@@ -229,30 +214,23 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
 
       {/* ── Message Input ───────────────────────────────────────────────── */}
       <Box px={{ base: 2, md: 4 }} py={3} bg="bg-surface" borderTop="1px solid" borderColor="border-subtle">
-        <FormControl onKeyDown={sendMessage}>
+        <FormControl onKeyDown={sendHandler}>
           <InputGroup size="md">
             <Input
               placeholder="Message..."
               value={newMessage}
               onChange={typingHandler}
-              bg="bg-input"
-              border="1px solid" borderColor="border-subtle"
-              color="text-primary"
-              borderRadius="full"
-              pr="3rem"
+              bg="bg-input" border="1px solid" borderColor="border-subtle"
+              color="text-primary" borderRadius="full" pr="3rem"
               _placeholder={{ color: "text-disabled" }}
               _focus={{ borderColor: "accent", boxShadow: "0 0 0 1px #E1306C" }}
               px={5}
             />
             <InputRightElement>
               <IconButton
-                aria-label="Attach file"
-                icon={<AttachmentIcon />}
-                size="sm" variant="ghost"
-                color="text-secondary"
-                borderRadius="full"
-                _hover={{ color: "accent" }}
-                isDisabled
+                aria-label="Attach file" icon={<AttachmentIcon />}
+                size="sm" variant="ghost" color="text-secondary"
+                borderRadius="full" _hover={{ color: "accent" }} isDisabled
               />
             </InputRightElement>
           </InputGroup>

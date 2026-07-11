@@ -10,6 +10,7 @@ import GroupChatModal from "./miscellaneous/GroupChatModal";
 import { useAuthStore } from "../store/authStore";
 import { useChatStore } from "../store/chatStore";
 import { fetchChats, queryKeys } from "../store";
+import { Chat } from "../types";
 
 /**
  * MyChats — Left sidebar showing conversation list.
@@ -40,7 +41,7 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain: _fetchAgain }) => {
     enabled: !!user, // only fetch when logged in
   });
 
-  const filteredChats = chats.filter((chat) => {
+  const filteredChats = chats.filter((chat: Chat) => {
     if (!user) return false;
     const name = chat.isGroupChat ? chat.chatName : getSender(user, chat.users);
     return name?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -108,7 +109,7 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain: _fetchAgain }) => {
                 {searchQuery ? "No chats found" : "No conversations yet"}
               </Text>
             )}
-            {filteredChats.map((chat) => {
+            {filteredChats.map((chat: Chat) => {
               const chatName  = chat.isGroupChat ? chat.chatName : (user ? getSender(user, chat.users) : "");
               const isSelected = selectedChat?._id === chat._id;
               return (

@@ -9,7 +9,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import vibeChatTheme from "./theme";
 import { queryClient } from "./store";
-import ChatProvider from "./context/ChatProvider";
 
 /**
  * App entry point.
@@ -19,7 +18,6 @@ import ChatProvider from "./context/ChatProvider";
  * 2. BrowserRouter    — routing context
  * 3. QueryClientProvider — TanStack Query (server state)
  * 4. ChakraProvider   — UI theme
- * 5. ChatProvider     — Legacy Context (temporary until migrated in VIB-19/20)
  */
 const root = ReactDOM.createRoot(document.getElementById("root") as HTMLElement);
 
@@ -29,9 +27,7 @@ root.render(
     <BrowserRouter>
       <QueryClientProvider client={queryClient}>
         <ChakraProvider theme={vibeChatTheme}>
-          <ChatProvider>
-            <App />
-          </ChatProvider>
+          <App />
         </ChakraProvider>
         {/* DevTools only in development — tree-shaken out of production build */}
         <ReactQueryDevtools initialIsOpen={false} />

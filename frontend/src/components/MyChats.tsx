@@ -38,7 +38,8 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
   }, [fetchAgain]);
 
   const filteredChats = chats.filter((chat) => {
-    const name = chat.isGroupChat ? chat.chatName : getSender(loggedUser!, chat.users);
+    if (!loggedUser) return false;
+    const name = chat.isGroupChat ? chat.chatName : getSender(loggedUser, chat.users);
     return name?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
@@ -99,7 +100,7 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain }) => {
               </Text>
             )}
             {filteredChats.map((chat) => {
-              const chatName = chat.isGroupChat ? chat.chatName : getSender(loggedUser!, chat.users);
+              const chatName = chat.isGroupChat ? chat.chatName : (loggedUser ? getSender(loggedUser, chat.users) : "");
               const isSelected = selectedChat?._id === chat._id;
               return (
                 <Box

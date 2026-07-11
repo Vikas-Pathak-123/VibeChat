@@ -59,7 +59,7 @@ const startServer = async () => {
   const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
     pingTimeout: 60000,
     cors: {
-      origin: "http://localhost:3000",
+      origin: "*",
     },
   });
 

@@ -5,7 +5,7 @@ import {
   InputRightElement, Spinner, useToast,
 } from "@chakra-ui/react";
 import { ArrowBackIcon, AttachmentIcon } from "@chakra-ui/icons";
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { getSenderFull } from "../config/ChatLogics";
@@ -53,6 +53,11 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
 
   const isTyping = selectedChat ? (typingChats[selectedChat._id] ?? false) : false;
 
+  // ── Join socket room whenever the selected chat changes ─────────────────────
+  useEffect(() => {
+    if (selectedChat) joinRoom(selectedChat._id);
+  }, [selectedChat, joinRoom]);
+
   // ── Fetch messages ─────────────────────────────────────────────────────────
   const {
     data: messages = [],
@@ -61,11 +66,6 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
     queryKey: queryKeys.messages.list(selectedChat?._id ?? ""),
     queryFn: () => fetchMessages(selectedChat!._id),
     enabled: !!selectedChat,
-    // Join socket room whenever messages load for a new chat
-    select: useCallback((data: Message[]) => {
-      if (selectedChat) joinRoom(selectedChat._id);
-      return data;
-    }, [selectedChat, joinRoom]),
   });
 
   // ── Send message mutation ──────────────────────────────────────────────────

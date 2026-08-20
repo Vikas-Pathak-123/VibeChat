@@ -58,4 +58,15 @@ describe("PUT /api/message/:id/react", () => {
     expect(res.status).toBe(200);
     expect(res.body.reactions).toHaveLength(2);
   });
+
+  it("returns 400 (not 500) for a malformed message id", async () => {
+    const alice = await createUser("alice@example.com", "Alice");
+
+    const res = await request(app)
+      .put(`/api/message/not-a-valid-id/react`)
+      .set("Authorization", `Bearer ${tokenFor(alice)}`)
+      .send({ emoji: "👍" });
+
+    expect(res.status).toBe(400);
+  });
 });

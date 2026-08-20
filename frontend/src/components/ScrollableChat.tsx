@@ -1,7 +1,8 @@
 import { Avatar } from "@chakra-ui/avatar";
 import { Tooltip } from "@chakra-ui/tooltip";
-import { Box, Text } from "@chakra-ui/react";
+import { Box, IconButton, Popover, PopoverBody, PopoverContent, PopoverTrigger, Text } from "@chakra-ui/react";
 import ScrollableFeed from "react-scrollable-feed";
+import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import {
   isLastMessage,
   isSameSender,
@@ -9,18 +10,27 @@ import {
   isSameUser,
 } from "../config/ChatLogics";
 import { useAuthStore } from "../store/authStore";
-import { Message } from "../types";
+import { Message, Reaction } from "../types";
 
 interface ScrollableChatProps {
   messages: Message[];
+  onReact: (messageId: string, emoji: string) => void;
 }
+
+const groupReactions = (reactions: Reaction[]): { emoji: string; userIds: string[] }[] => {
+  const groups: Record<string, string[]> = {};
+  reactions.forEach((r) => {
+    groups[r.emoji] = groups[r.emoji] ? [...groups[r.emoji], r.userId] : [r.userId];
+  });
+  return Object.entries(groups).map(([emoji, userIds]) => ({ emoji, userIds }));
+};
 
 /**
  * ScrollableChat — Renders message bubbles.
  * Reads logged-in user from useAuthStore (Zustand) instead of useChatState.
  * No server state — messages are passed as props from SingleChat.
  */
-const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages }) => {
+const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact }) => {
   const { user } = useAuthStore();
 
   if (!user) return null;
@@ -76,23 +86,68 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages }) => {
                   {m.sender.name.split(" ")[0]}
                 </Text>
               )}
-              <Box
-                bg={isSent ? "accent" : "bg-elevated"}
-                color={isSent ? "white" : "text-primary"}
-                px={4} py={2}
-                borderRadius={
-                  isSent ? "18px 18px 4px 18px" : "18px 18px 18px 4px"
-                }
-                fontSize="sm"
-                lineHeight="1.5"
-                wordBreak="break-word"
-                boxShadow={isSent
-                  ? "0 1px 8px rgba(225,48,108,0.25)"
-                  : "0 1px 4px rgba(0,0,0,0.12)"
-                }
-              >
-                {m.content}
+
+              <Box display="flex" alignItems="center" gap={1}>
+                <Box
+                  bg={isSent ? "accent" : "bg-elevated"}
+                  color={isSent ? "white" : "text-primary"}
+                  px={4} py={2}
+                  borderRadius={
+                    isSent ? "18px 18px 4px 18px" : "18px 18px 18px 4px"
+                  }
+                  fontSize="sm"
+                  lineHeight="1.5"
+                  wordBreak="break-word"
+                  boxShadow={isSent
+                    ? "0 1px 8px rgba(225,48,108,0.25)"
+                    : "0 1px 4px rgba(0,0,0,0.12)"
+                  }
+                >
+                  {m.content}
+                </Box>
+
+                <Popover placement="top" isLazy>
+                  <PopoverTrigger>
+                    <IconButton
+                      aria-label="Add reaction"
+                      icon={<Text fontSize="xs">🙂</Text>}
+                      size="xs" variant="ghost" borderRadius="full"
+                      minW="20px" h="20px" flexShrink={0}
+                    />
+                  </PopoverTrigger>
+                  <PopoverContent w="auto" border="none" bg="transparent" boxShadow="none">
+                    <PopoverBody p={0}>
+                      <EmojiPicker
+                        onEmojiClick={(data: EmojiClickData) => onReact(m._id, data.emoji)}
+                        height={350}
+                        width={300}
+                      />
+                    </PopoverBody>
+                  </PopoverContent>
+                </Popover>
               </Box>
+
+              {m.reactions.length > 0 && (
+                <Box display="flex" flexWrap="wrap" gap={1} mt="2px">
+                  {groupReactions(m.reactions).map(({ emoji, userIds }) => (
+                    <Box
+                      key={emoji}
+                      as="button"
+                      onClick={() => onReact(m._id, emoji)}
+                      display="flex" alignItems="center" gap="2px"
+                      px={2} py="1px" borderRadius="full"
+                      fontSize="xs"
+                      bg={userIds.includes(user._id) ? "accent" : "bg-elevated"}
+                      color={userIds.includes(user._id) ? "white" : "text-primary"}
+                      border="1px solid" borderColor="border-subtle"
+                    >
+                      <span>{emoji}</span>
+                      <span>{userIds.length}</span>
+                    </Box>
+                  ))}
+                </Box>
+              )}
+
               <Text fontSize="10px" color="text-disabled" mt="2px" mx={1}>
                 {time}
               </Text>

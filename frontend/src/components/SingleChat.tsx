@@ -12,7 +12,7 @@ import { getSenderFull } from "../config/ChatLogics";
 import { useAuthStore } from "../store/authStore";
 import { useChatStore } from "../store/chatStore";
 import { useSocketStore } from "../store/socketStore";
-import { fetchMessages, sendMessage, queryKeys, queryClient } from "../store";
+import { fetchMessages, sendMessage, reactToMessage, queryKeys, queryClient } from "../store";
 import { Message } from "../types";
 import ScrollableChat from "./ScrollableChat";
 import ProfileModal from "./miscellaneous/ProfileModal";
@@ -49,7 +49,7 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
   const toast                              = useToast();
   const { user }                           = useAuthStore();
   const { selectedChat, setSelectedChat, typingChats } = useChatStore();
-  const { joinRoom, emitTyping, emitStopTyping, emitNewMessage } = useSocketStore();
+  const { joinRoom, emitTyping, emitStopTyping, emitNewMessage, emitReaction } = useSocketStore();
 
   const isTyping = selectedChat ? (typingChats[selectedChat._id] ?? false) : false;
 
@@ -84,6 +84,20 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
     },
     onError: () =>
       toast({ title: "Failed to send message", status: "error", duration: 5000, isClosable: true, position: "bottom" }),
+  });
+
+  // ── React to message mutation ──────────────────────────────────────────────
+  const { mutate: doReact } = useMutation({
+    mutationFn: reactToMessage,
+    onSuccess: (updatedMsg) => {
+      queryClient.setQueryData<Message[]>(
+        queryKeys.messages.list(selectedChat!._id),
+        (old: Message[] = []) => old.map((m) => (m._id === updatedMsg._id ? updatedMsg : m))
+      );
+      emitReaction(updatedMsg);
+    },
+    onError: () =>
+      toast({ title: "Failed to react", status: "error", duration: 4000, isClosable: true, position: "bottom" }),
   });
 
   const sendHandler = (e: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -196,7 +210,10 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
               "&::-webkit-scrollbar-thumb": { bg: "accent", borderRadius: "full" },
             }}
           >
-            <ScrollableChat messages={messages} />
+            <ScrollableChat
+              messages={messages}
+              onReact={(messageId, emoji) => doReact({ messageId, emoji })}
+            />
           </Box>
         )}
       </Box>

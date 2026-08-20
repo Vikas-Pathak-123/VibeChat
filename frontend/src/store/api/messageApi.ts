@@ -16,3 +16,10 @@ export const sendMessage = async (payload: SendMessagePayload): Promise<Message>
   const { data } = await apiClient.post<Message>("/api/message", payload);
   return data;
 };
+
+export const reactToMessage = async (params: { messageId: string; emoji: string }): Promise<Message> => {
+  const { data } = await apiClient.put<Message>(`/api/message/${params.messageId}/react`, {
+    emoji: params.emoji,
+  });
+  return data;
+};

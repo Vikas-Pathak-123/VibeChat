@@ -106,3 +106,39 @@ export const reactToMessage = asyncHandler(async (req: Request, res: Response): 
   const populated = await message.populate("sender", "name picture email");
   res.json(populated);
 });
+
+//@description     Soft-delete a message (sender only)
+//@route           DELETE /api/Message/:id
+//@access          Protected
+export const deleteMessage = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  const { id } = req.params;
+
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  let message;
+  try {
+    message = await Message.findById(id);
+  } catch (error: any) {
+    res.status(400);
+    throw new Error(error.message);
+  }
+
+  if (!message) {
+    res.status(404);
+    throw new Error("Message not found");
+  }
+
+  if (message.sender.toString() !== req.user._id.toString()) {
+    res.status(403);
+    throw new Error("Not authorized to delete this message");
+  }
+
+  message.isDeleted = true;
+  await message.save();
+
+  const populated = await message.populate("sender", "name picture email");
+  res.json(populated);
+});

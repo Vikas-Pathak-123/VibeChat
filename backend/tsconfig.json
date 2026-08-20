@@ -18,5 +18,5 @@
     "noImplicitReturns": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "../frontend"]
+  "exclude": ["node_modules", "dist", "../frontend", "__tests__"]
 }

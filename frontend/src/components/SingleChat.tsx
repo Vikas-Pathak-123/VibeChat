@@ -5,7 +5,7 @@ import {
   InputRightElement, Spinner, useToast,
 } from "@chakra-ui/react";
 import { ArrowBackIcon, AttachmentIcon } from "@chakra-ui/icons";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Player } from "@lottiefiles/react-lottie-player";
 import { getSenderFull } from "../config/ChatLogics";
@@ -45,6 +45,8 @@ interface SingleChatProps {
 const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) => {
   const [newMessage, setNewMessage] = useState<string>("");
   const [typing, setTyping]         = useState<boolean>(false);
+  const [imageUploading, setImageUploading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const toast                              = useToast();
   const { user }                           = useAuthStore();
@@ -136,6 +138,28 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         setTyping(false);
       }
     }, 3000);
+  };
+
+  const handleImageUpload = (file: File | undefined): void => {
+    if (!file || !selectedChat) return;
+    if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(file.type)) {
+      toast({ title: "Unsupported image type", status: "warning", duration: 3000, isClosable: true, position: "bottom" });
+      return;
+    }
+    setImageUploading(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "VibeChat");
+    formData.append("cloud_name", "difmt49ax");
+    fetch("https://api.cloudinary.com/v1_1/difmt49ax/image/upload", { method: "post", body: formData })
+      .then((r) => r.json())
+      .then((data) => {
+        doSendMessage({ content: data.url, chatId: selectedChat._id, messageType: "image" });
+      })
+      .catch(() =>
+        toast({ title: "Image upload failed", status: "error", duration: 4000, isClosable: true, position: "bottom" })
+      )
+      .finally(() => setImageUploading(false));
   };
 
   // ── Empty state ────────────────────────────────────────────────────────────
@@ -262,10 +286,17 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
               <IconButton
                 aria-label="Attach file" icon={<AttachmentIcon />}
                 size="sm" variant="ghost" color="text-secondary"
-                borderRadius="full" _hover={{ color: "accent" }} isDisabled
+                borderRadius="full" _hover={{ color: "accent" }}
+                isLoading={imageUploading}
+                onClick={() => fileInputRef.current?.click()}
               />
             </InputRightElement>
           </InputGroup>
+          <input
+            ref={fileInputRef} type="file" accept="image/*"
+            style={{ display: "none" }}
+            onChange={(e) => handleImageUpload(e.target.files?.[0])}
+          />
           <Text display={{ base: "none", md: "block" }} fontSize="10px" color="text-disabled" mt={1} textAlign="center">
             Press Enter to send
           </Text>

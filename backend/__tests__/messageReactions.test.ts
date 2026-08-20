@@ -1,4 +1,5 @@
 import request from "supertest";
+import mongoose from "mongoose";
 import app from "../app";
 import { createUser, tokenFor, createChatWith, createMessage } from "./helpers";
 
@@ -68,5 +69,17 @@ describe("PUT /api/message/:id/react", () => {
       .send({ emoji: "👍" });
 
     expect(res.status).toBe(400);
+  });
+
+  it("returns 404 for a well-formed but nonexistent message id", async () => {
+    const alice = await createUser("alice@example.com", "Alice");
+    const nonexistentId = new mongoose.Types.ObjectId().toString();
+
+    const res = await request(app)
+      .put(`/api/message/${nonexistentId}/react`)
+      .set("Authorization", `Bearer ${tokenFor(alice)}`)
+      .send({ emoji: "👍" });
+
+    expect(res.status).toBe(404);
   });
 });

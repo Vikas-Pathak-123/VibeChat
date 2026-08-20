@@ -19,6 +19,7 @@
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
     "axios": "^1.4.0",
+    "emoji-picker-react": "^4.19.1",
     "framer-motion": "^10.12.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

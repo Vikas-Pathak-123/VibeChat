@@ -1,6 +1,10 @@
 import { Avatar } from "@chakra-ui/avatar";
 import { Tooltip } from "@chakra-ui/tooltip";
-import { Box, IconButton, Popover, PopoverBody, PopoverContent, PopoverTrigger, Text } from "@chakra-ui/react";
+import {
+  Box, IconButton, Popover, PopoverBody, PopoverContent, PopoverTrigger, Text,
+  Menu, MenuButton, MenuList, MenuItem,
+} from "@chakra-ui/react";
+import { ChevronDownIcon } from "@chakra-ui/icons";
 import ScrollableFeed from "react-scrollable-feed";
 import EmojiPicker, { EmojiClickData } from "emoji-picker-react";
 import {
@@ -15,6 +19,7 @@ import { Message, Reaction } from "../types";
 interface ScrollableChatProps {
   messages: Message[];
   onReact: (messageId: string, emoji: string) => void;
+  onDelete: (messageId: string) => void;
 }
 
 const groupReactions = (reactions: Reaction[]): { emoji: string; userIds: string[] }[] => {
@@ -30,7 +35,7 @@ const groupReactions = (reactions: Reaction[]): { emoji: string; userIds: string
  * Reads logged-in user from useAuthStore (Zustand) instead of useChatState.
  * No server state — messages are passed as props from SingleChat.
  */
-const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact }) => {
+const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact, onDelete }) => {
   const { user } = useAuthStore();
 
   if (!user) return null;
@@ -88,46 +93,73 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact }) =>
               )}
 
               <Box display="flex" alignItems="center" gap={1}>
-                <Box
-                  bg={isSent ? "accent" : "bg-elevated"}
-                  color={isSent ? "white" : "text-primary"}
-                  px={4} py={2}
-                  borderRadius={
-                    isSent ? "18px 18px 4px 18px" : "18px 18px 18px 4px"
-                  }
-                  fontSize="sm"
-                  lineHeight="1.5"
-                  wordBreak="break-word"
-                  boxShadow={isSent
-                    ? "0 1px 8px rgba(225,48,108,0.25)"
-                    : "0 1px 4px rgba(0,0,0,0.12)"
-                  }
-                >
-                  {m.content}
-                </Box>
+                {m.isDeleted ? (
+                  <Box
+                    bg="bg-elevated" color="text-disabled" fontStyle="italic"
+                    px={4} py={2} borderRadius="18px" fontSize="sm"
+                  >
+                    This message was deleted
+                  </Box>
+                ) : (
+                  <Box
+                    bg={isSent ? "accent" : "bg-elevated"}
+                    color={isSent ? "white" : "text-primary"}
+                    px={4} py={2}
+                    borderRadius={
+                      isSent ? "18px 18px 4px 18px" : "18px 18px 18px 4px"
+                    }
+                    fontSize="sm"
+                    lineHeight="1.5"
+                    wordBreak="break-word"
+                    boxShadow={isSent
+                      ? "0 1px 8px rgba(225,48,108,0.25)"
+                      : "0 1px 4px rgba(0,0,0,0.12)"
+                    }
+                  >
+                    {m.content}
+                  </Box>
+                )}
 
-                <Popover placement="top" isLazy>
-                  <PopoverTrigger>
-                    <IconButton
-                      aria-label="Add reaction"
-                      icon={<Text fontSize="xs">🙂</Text>}
-                      size="xs" variant="ghost" borderRadius="full"
-                      minW="20px" h="20px" flexShrink={0}
-                    />
-                  </PopoverTrigger>
-                  <PopoverContent w="auto" border="none" bg="transparent" boxShadow="none">
-                    <PopoverBody p={0}>
-                      <EmojiPicker
-                        onEmojiClick={(data: EmojiClickData) => onReact(m._id, data.emoji)}
-                        height={350}
-                        width={300}
+                {!m.isDeleted && (
+                  <Popover placement="top" isLazy>
+                    <PopoverTrigger>
+                      <IconButton
+                        aria-label="Add reaction"
+                        icon={<Text fontSize="xs">🙂</Text>}
+                        size="xs" variant="ghost" borderRadius="full"
+                        minW="20px" h="20px" flexShrink={0}
                       />
-                    </PopoverBody>
-                  </PopoverContent>
-                </Popover>
+                    </PopoverTrigger>
+                    <PopoverContent w="auto" border="none" bg="transparent" boxShadow="none">
+                      <PopoverBody p={0}>
+                        <EmojiPicker
+                          onEmojiClick={(data: EmojiClickData) => onReact(m._id, data.emoji)}
+                          height={350}
+                          width={300}
+                        />
+                      </PopoverBody>
+                    </PopoverContent>
+                  </Popover>
+                )}
+
+                {isSent && !m.isDeleted && (
+                  <Menu placement="top-end">
+                    <MenuButton
+                      as={IconButton}
+                      aria-label="Message options"
+                      icon={<ChevronDownIcon />}
+                      size="xs" variant="ghost" minW="20px" h="20px" flexShrink={0}
+                    />
+                    <MenuList minW="120px">
+                      <MenuItem onClick={() => onDelete(m._id)} color="red.400">
+                        Delete
+                      </MenuItem>
+                    </MenuList>
+                  </Menu>
+                )}
               </Box>
 
-              {m.reactions.length > 0 && (
+              {!m.isDeleted && m.reactions.length > 0 && (
                 <Box display="flex" flexWrap="wrap" gap={1} mt="2px">
                   {groupReactions(m.reactions).map(({ emoji, userIds }) => (
                     <Box

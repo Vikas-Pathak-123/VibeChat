@@ -23,3 +23,8 @@ export const reactToMessage = async (params: { messageId: string; emoji: string 
   });
   return data;
 };
+
+export const deleteMessage = async (messageId: string): Promise<Message> => {
+  const { data } = await apiClient.delete<Message>(`/api/message/${messageId}`);
+  return data;
+};

@@ -77,25 +77,30 @@ export const reactToMessage = asyncHandler(async (req: Request, res: Response): 
     throw new Error("Not authorized");
   }
 
-  const message = await Message.findById(id);
-  if (!message) {
-    res.status(404);
-    throw new Error("Message not found");
+  try {
+    const message = await Message.findById(id);
+    if (!message) {
+      res.status(404);
+      throw new Error("Message not found");
+    }
+
+    const userId = req.user._id.toString();
+    const existingIndex = message.reactions.findIndex(
+      (r) => r.emoji === emoji && r.userId.toString() === userId
+    );
+
+    if (existingIndex >= 0) {
+      message.reactions.splice(existingIndex, 1);
+    } else {
+      message.reactions.push({ emoji, userId: req.user._id as unknown as mongoose.Types.ObjectId });
+    }
+
+    await message.save();
+
+    const populated = await message.populate("sender", "name picture email");
+    res.json(populated);
+  } catch (error: any) {
+    res.status(400);
+    throw new Error(error.message);
   }
-
-  const userId = req.user._id.toString();
-  const existingIndex = message.reactions.findIndex(
-    (r) => r.emoji === emoji && r.userId.toString() === userId
-  );
-
-  if (existingIndex >= 0) {
-    message.reactions.splice(existingIndex, 1);
-  } else {
-    message.reactions.push({ emoji, userId: req.user._id as unknown as mongoose.Types.ObjectId });
-  }
-
-  await message.save();
-
-  const populated = await message.populate("sender", "name picture email");
-  res.json(populated);
 });

@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
+import mongoose from "mongoose";
 import Chat from "../models/chatModel";
 import User from "../models/userModel";
 import Message from "../models/messageModel";
@@ -10,7 +11,7 @@ import Message from "../models/messageModel";
 export const allMessages = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   try {
     const messages = await Message.find({ chat: req.params.chatId })
-      .populate("sender", "name pic email")
+      .populate("sender", "name picture email")
       .populate("chat");
     res.json(messages);
   } catch (error: any) {
@@ -44,11 +45,11 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response): Pro
   try {
     let message: any = await Message.create(newMessage);
 
-    message = await message.populate("sender", "name pic");
+    message = await message.populate("sender", "name picture");
     message = await message.populate("chat");
     message = await User.populate(message, {
       path: "chat.users",
-      select: "name pic email",
+      select: "name picture email",
     });
 
     await Chat.findByIdAndUpdate(req.body.chatId, { latestMessage: message });
@@ -58,4 +59,43 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response): Pro
     res.status(400);
     throw new Error(error.message);
   }
+});
+
+//@description     Toggle a reaction on a message
+//@route           PUT /api/Message/:id/react
+//@access          Protected
+export const reactToMessage = asyncHandler(async (req: Request, res: Response): Promise<any> => {
+  const { emoji } = req.body;
+  const { id } = req.params;
+
+  if (!emoji) {
+    return res.sendStatus(400);
+  }
+
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  const message = await Message.findById(id);
+  if (!message) {
+    res.status(404);
+    throw new Error("Message not found");
+  }
+
+  const userId = req.user._id.toString();
+  const existingIndex = message.reactions.findIndex(
+    (r) => r.emoji === emoji && r.userId.toString() === userId
+  );
+
+  if (existingIndex >= 0) {
+    message.reactions.splice(existingIndex, 1);
+  } else {
+    message.reactions.push({ emoji, userId: req.user._id as unknown as mongoose.Types.ObjectId });
+  }
+
+  await message.save();
+
+  const populated = await message.populate("sender", "name picture email");
+  res.json(populated);
 });

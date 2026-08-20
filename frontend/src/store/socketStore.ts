@@ -35,6 +35,7 @@ interface SocketState {
   emitStopTyping: (chatId: string) => void;
   emitNewMessage: (message: Message) => void;
   emitReaction: (message: Message) => void;
+  emitMessageDeleted: (message: Message) => void;
 }
 
 export const useSocketStore = create<SocketState>()(
@@ -83,6 +84,13 @@ export const useSocketStore = create<SocketState>()(
           });
         });
 
+        // ── Message deleted ──────────────────────────────────────────────────
+        socket.on("message deleted", ({ chat }) => {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.messages.list(chat._id),
+          });
+        });
+
         // ── Typing indicators ────────────────────────────────────────────────
         socket.on("typing", (chatId: string) => {
           useChatStore.getState().setTyping(chatId, true);
@@ -120,6 +128,16 @@ export const useSocketStore = create<SocketState>()(
         const actorId = useAuthStore.getState().user?._id;
         if (!actorId) return;
         get().socket?.emit("message reaction", { message, actorId });
+      },
+
+      emitMessageDeleted: (message: Message) => {
+        const actorId = useAuthStore.getState().user?._id;
+        if (!actorId) return;
+        get().socket?.emit("message deleted", {
+          messageId: message._id,
+          chat: { _id: message.chat._id, users: message.chat.users.map((u) => ({ _id: u._id })) },
+          actorId,
+        });
       },
     }),
     { name: "SocketStore" }

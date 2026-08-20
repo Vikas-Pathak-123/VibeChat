@@ -68,6 +68,18 @@ const startServer = async () => {
       });
     });
 
+    socket.on("message deleted", (payload) => {
+      const chat = payload.chat;
+
+      if (!chat.users) return console.log("chat.users not defined");
+
+      chat.users.forEach((user) => {
+        if (user._id === payload.actorId) return;
+
+        socket.in(user._id).emit("message deleted", payload);
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log("USER DISCONNECTED");
       if (socketUserData) {

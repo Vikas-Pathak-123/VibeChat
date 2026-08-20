@@ -19,6 +19,13 @@ export interface ReactionUpdatePayload {
   actorId: string;
 }
 
+/** Payload for a deletion relay — actorId is who performed the action, not the message's original sender */
+export interface MessageDeletedPayload {
+  messageId: string;
+  chat: { _id: string; users: { _id: string }[] };
+  actorId: string;
+}
+
 /** Events the client sends to the server */
 export interface ClientToServerEvents {
   setup: (userData: IUser) => void;
@@ -27,6 +34,7 @@ export interface ClientToServerEvents {
   "stop typing": (room: string) => void;
   "new message": (message: SocketMessage) => void;
   "message reaction": (payload: ReactionUpdatePayload) => void;
+  "message deleted": (payload: MessageDeletedPayload) => void;
 }
 
 /** Events the server sends to the client */
@@ -36,4 +44,5 @@ export interface ServerToClientEvents {
   "stop typing": () => void;
   "message recieved": (message: SocketMessage) => void;
   "message reaction": (payload: ReactionUpdatePayload) => void;
+  "message deleted": (payload: MessageDeletedPayload) => void;
 }

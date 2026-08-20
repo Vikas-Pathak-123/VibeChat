@@ -1,7 +1,7 @@
 import apiClient from "./apiClient";
 import { Message } from "../../types";
 
-export interface SendMessagePayload { content: string; chatId: string }
+export interface SendMessagePayload { content: string; chatId: string; messageType?: "text" | "image" }
 
 /**
  * TanStack Query fetch functions for the Message domain.

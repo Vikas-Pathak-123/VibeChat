@@ -24,7 +24,7 @@ export const allMessages = asyncHandler(async (req: Request, res: Response): Pro
 //@route           POST /api/Message/
 //@access          Protected
 export const sendMessage = asyncHandler(async (req: Request, res: Response): Promise<any> => {
-  const { content, chatId } = req.body;
+  const { content, chatId, messageType } = req.body;
 
   if (!content || !chatId) {
     console.log("Invalid data passed into request");
@@ -40,6 +40,7 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response): Pro
     sender: req.user._id,
     content: content,
     chat: chatId,
+    messageType: messageType === "image" ? "image" : "text",
   };
 
   try {

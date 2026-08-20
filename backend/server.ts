@@ -56,6 +56,18 @@ const startServer = async () => {
       });
     });
 
+    socket.on("message reaction", (payload) => {
+      const chat = payload.message.chat;
+
+      if (!chat.users) return console.log("chat.users not defined");
+
+      chat.users.forEach((user) => {
+        if (user._id === payload.actorId) return;
+
+        socket.in(user._id).emit("message reaction", payload);
+      });
+    });
+
     socket.on("disconnect", () => {
       console.log("USER DISCONNECTED");
       if (socketUserData) {

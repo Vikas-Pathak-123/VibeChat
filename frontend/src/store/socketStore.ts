@@ -6,6 +6,7 @@ import { User, Message } from "../types";
 import { queryClient } from "./queryClient";
 import { queryKeys } from "./keys/queryKeys";
 import { useChatStore } from "./chatStore";
+import { useAuthStore } from "./authStore";
 
 /**
  * Socket Store — Zustand
@@ -33,6 +34,7 @@ interface SocketState {
   emitTyping: (chatId: string) => void;
   emitStopTyping: (chatId: string) => void;
   emitNewMessage: (message: Message) => void;
+  emitReaction: (message: Message) => void;
 }
 
 export const useSocketStore = create<SocketState>()(
@@ -74,6 +76,13 @@ export const useSocketStore = create<SocketState>()(
           queryClient.invalidateQueries({ queryKey: queryKeys.chats.all() });
         });
 
+        // ── Reaction update ──────────────────────────────────────────────────
+        socket.on("message reaction", ({ message }) => {
+          queryClient.invalidateQueries({
+            queryKey: queryKeys.messages.list(message.chat._id),
+          });
+        });
+
         // ── Typing indicators ────────────────────────────────────────────────
         socket.on("typing", (chatId: string) => {
           useChatStore.getState().setTyping(chatId, true);
@@ -105,6 +114,12 @@ export const useSocketStore = create<SocketState>()(
 
       emitNewMessage: (message: Message) => {
         get().socket?.emit("new message", message);
+      },
+
+      emitReaction: (message: Message) => {
+        const actorId = useAuthStore.getState().user?._id;
+        if (!actorId) return;
+        get().socket?.emit("message reaction", { message, actorId });
       },
     }),
     { name: "SocketStore" }

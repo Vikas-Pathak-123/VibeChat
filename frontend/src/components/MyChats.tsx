@@ -112,6 +112,13 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain: _fetchAgain }) => {
             {filteredChats.map((chat: Chat) => {
               const chatName  = chat.isGroupChat ? chat.chatName : (user ? getSender(user, chat.users) : "");
               const isSelected = selectedChat?._id === chat._id;
+              const previewText = chat.latestMessage
+                ? chat.latestMessage.isDeleted
+                  ? "This message was deleted"
+                  : chat.latestMessage.messageType === "image"
+                  ? "📷 Photo"
+                  : chat.latestMessage.content
+                : "";
               return (
                 <Box
                   key={chat._id}
@@ -148,9 +155,7 @@ const MyChats: React.FC<MyChatsProps> = ({ fetchAgain: _fetchAgain }) => {
                     {chat.latestMessage ? (
                       <Text fontSize="xs" color="text-secondary" isTruncated maxW="170px">
                         <b>{chat.latestMessage.sender.name.split(" ")[0]}:</b>{" "}
-                        {chat.latestMessage.content.length > 35
-                          ? chat.latestMessage.content.substring(0, 35) + "..."
-                          : chat.latestMessage.content}
+                        {previewText.length > 35 ? previewText.substring(0, 35) + "..." : previewText}
                       </Text>
                     ) : (
                       <Text fontSize="xs" color="text-disabled">No messages yet</Text>

@@ -111,6 +111,8 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
         (old: Message[] = []) => old.map((m) => (m._id === updatedMsg._id ? updatedMsg : m))
       );
       emitMessageDeleted(updatedMsg);
+      // Invalidate chat list so "latest message" preview updates
+      queryClient.invalidateQueries({ queryKey: queryKeys.chats.all() });
     },
     onError: () =>
       toast({ title: "Failed to delete message", status: "error", duration: 4000, isClosable: true, position: "bottom" }),

@@ -91,6 +91,22 @@ export const reactToMessage = asyncHandler(async (req: Request, res: Response): 
     throw new Error("Message not found");
   }
 
+  await message.populate("chat");
+  await User.populate(message, { path: "chat.users", select: "_id" });
+
+  if (message.isDeleted) {
+    res.status(400);
+    throw new Error("Cannot react to a deleted message");
+  }
+
+  const isMember = (message.chat as any).users.some(
+    (u: any) => u._id.toString() === req.user!._id.toString()
+  );
+  if (!isMember) {
+    res.status(403);
+    throw new Error("Not authorized to react in this chat");
+  }
+
   const userId = req.user._id.toString();
   const existingIndex = message.reactions.findIndex(
     (r) => r.emoji === emoji && r.userId.toString() === userId
@@ -105,6 +121,7 @@ export const reactToMessage = asyncHandler(async (req: Request, res: Response): 
   await message.save();
 
   const populated = await message.populate("sender", "name picture email");
+  await User.populate(populated, { path: "chat.users", select: "name picture email" });
   res.json(populated);
 });
 
@@ -140,6 +157,11 @@ export const deleteMessage = asyncHandler(async (req: Request, res: Response): P
   message.isDeleted = true;
   await message.save();
 
-  const populated = await message.populate("sender", "name picture email");
+  let populated: any = await message.populate("sender", "name picture email");
+  populated = await populated.populate("chat");
+  populated = await User.populate(populated, {
+    path: "chat.users",
+    select: "name picture email",
+  });
   res.json(populated);
 });

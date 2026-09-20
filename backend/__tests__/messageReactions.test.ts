@@ -18,6 +18,7 @@ describe("PUT /api/message/:id/react", () => {
     expect(res.status).toBe(200);
     expect(res.body.reactions).toHaveLength(1);
     expect(res.body.reactions[0]).toMatchObject({ emoji: "👍", userId: bob._id.toString() });
+    expect(Array.isArray(res.body.chat.users)).toBe(true);
   });
 
   it("toggles the same emoji off on a second call from the same user", async () => {
@@ -81,5 +82,20 @@ describe("PUT /api/message/:id/react", () => {
       .send({ emoji: "👍" });
 
     expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when a user not in the chat tries to react", async () => {
+    const alice = await createUser("alice@example.com", "Alice");
+    const bob = await createUser("bob@example.com", "Bob");
+    const carol = await createUser("carol@example.com", "Carol");
+    const chat = await createChatWith([alice._id, bob._id]);
+    const message = await createMessage({ sender: alice._id, chat: chat._id });
+
+    const res = await request(app)
+      .put(`/api/message/${message._id}/react`)
+      .set("Authorization", `Bearer ${tokenFor(carol)}`)
+      .send({ emoji: "👍" });
+
+    expect(res.status).toBe(403);
   });
 });

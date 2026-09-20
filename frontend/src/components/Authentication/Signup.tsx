@@ -48,7 +48,7 @@ const Signup: React.FC = () => {
       toast({ title: "Passwords do not match", status: "error", duration: 4000, isClosable: true, position: "top" });
       return;
     }
-    register({ name, email, password, pic });
+    register({ name, email, password, picture: pic });
   };
 
   const postDetails = (file: File | undefined): void => {

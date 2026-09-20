@@ -3,7 +3,7 @@ import { User } from "../../types";
 
 /** Request / response shapes */
 export interface LoginPayload     { email: string; password: string }
-export interface RegisterPayload  { name: string; email: string; password: string; pic?: string }
+export interface RegisterPayload  { name: string; email: string; password: string; picture?: string }
 export interface UpdateProfilePayload { name?: string; picture?: string }
 
 /**

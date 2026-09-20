@@ -96,7 +96,7 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact, onDe
                   </Text>
                 )}
 
-                <Box display="flex" alignItems="center" gap={1}>
+                <Box display="flex" alignItems="center" gap={1} role="group">
                   {m.isDeleted ? (
                     <Box
                       bg="bg-elevated" color="text-disabled" fontStyle="italic"
@@ -139,6 +139,11 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact, onDe
                           icon={<Text fontSize="xs">🙂</Text>}
                           size="xs" variant="ghost" borderRadius="full"
                           minW="20px" h="20px" flexShrink={0}
+                          opacity={0}
+                          _groupHover={{ opacity: 1 }}
+                          _focusVisible={{ opacity: 1 }}
+                          sx={{ "@media (hover: none)": { opacity: 1 } }}
+                          transition="opacity 0.15s"
                         />
                       </PopoverTrigger>
                       <PopoverContent w="auto" border="none" bg="transparent" boxShadow="none">
@@ -160,6 +165,11 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact, onDe
                         aria-label="Message options"
                         icon={<ChevronDownIcon />}
                         size="xs" variant="ghost" minW="20px" h="20px" flexShrink={0}
+                        opacity={0}
+                        _groupHover={{ opacity: 1 }}
+                        _focusVisible={{ opacity: 1 }}
+                        sx={{ "@media (hover: none)": { opacity: 1 } }}
+                        transition="opacity 0.15s"
                       />
                       <MenuList minW="120px">
                         <MenuItem onClick={() => onDelete(m._id)} color="red.400">

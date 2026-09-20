@@ -170,9 +170,9 @@ const ScrollableChat: React.FC<ScrollableChatProps> = ({ messages, onReact, onDe
                   )}
                 </Box>
 
-                {!m.isDeleted && m.reactions.length > 0 && (
+                {!m.isDeleted && (m.reactions?.length ?? 0) > 0 && (
                   <Box display="flex" flexWrap="wrap" gap={1} mt="2px">
-                    {groupReactions(m.reactions).map(({ emoji, userIds }) => (
+                    {groupReactions(m.reactions ?? []).map(({ emoji, userIds }) => (
                       <Box
                         key={emoji}
                         as="button"

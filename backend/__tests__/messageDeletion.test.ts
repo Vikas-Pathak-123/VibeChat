@@ -14,6 +14,7 @@ describe("DELETE /api/message/:id", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.isDeleted).toBe(true);
+    expect(Array.isArray(res.body.chat.users)).toBe(true);
   });
 
   it("rejects a delete request from a non-sender with 403", async () => {

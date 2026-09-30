@@ -13,7 +13,8 @@ import { markChatNotificationsRead } from "./api/notificationApi";
  * Socket Store — Zustand
  *
  * Manages the Socket.IO connection lifecycle:
- * - connect() called once on login → socket lives for the entire session
+ * - connect() called on login and by Chatpage on load (restores the socket
+ *   after a page refresh) → one socket lives for the entire session
  * - disconnect() called on logout → cleans up listeners
  * - joinRoom() called when selectedChat changes
  *
@@ -47,8 +48,9 @@ export const useSocketStore = create<SocketState>()(
       isConnected: false,
 
       connect: (user: User) => {
-        const existing = get().socket;
-        if (existing?.connected) return; // Already connected — guard against double calls
+        // A socket already exists (connected or still connecting) — socket.io
+        // reconnects it on its own; opening a second one would duplicate events
+        if (get().socket) return;
 
         const socket = io(SOCKET_ENDPOINT);
 

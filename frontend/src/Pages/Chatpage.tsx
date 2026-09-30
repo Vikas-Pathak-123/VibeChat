@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Box, Spinner, Center } from "@chakra-ui/react";
 import Chatbox from "../components/Chatbox";
 import MyChats from "../components/MyChats";
 import SideDrawer from "../components/miscellaneous/SideDrawer";
 import { useAuthStore } from "../store/authStore";
+import { useSocketStore } from "../store/socketStore";
 
 /**
  * Chatpage — Main chat layout.
@@ -11,12 +12,19 @@ import { useAuthStore } from "../store/authStore";
  * Reads auth state from Zustand authStore.
  * isAuthLoading: true until Zustand persist middleware rehydrates from localStorage.
  * Shows spinner during rehydration to prevent blank screen flash.
+ * Connects Socket.IO for a rehydrated user — login connects it too, but a
+ * page refresh restores the user from localStorage without logging in.
  *
  * No useChatState. No ChatProvider dependency.
  */
 const Chatpage: React.FC = () => {
   const [fetchAgain, setFetchAgain]     = useState<boolean>(false);
   const { user, isAuthLoading }         = useAuthStore();
+  const { connect }                     = useSocketStore();
+
+  useEffect(() => {
+    if (user) connect(user);
+  }, [user, connect]);
 
   if (isAuthLoading) {
     return (

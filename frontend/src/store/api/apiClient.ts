@@ -89,10 +89,16 @@ apiClient.interceptors.response.use(
     }
 
     original._retriedAfterRefresh = true;
-    try {
-      await refreshSession();
-    } catch {
-      return Promise.reject(error);
+    // Sent with an older token than the one we now hold (a refresh finished
+    // while it was in flight) — just retry; refreshing again would rotate twice
+    const current = useAuthStore.getState().user?.token;
+    const alreadyRefreshed = current && original.headers.Authorization !== `Bearer ${current}`;
+    if (!alreadyRefreshed) {
+      try {
+        await refreshSession();
+      } catch {
+        return Promise.reject(error);
+      }
     }
     return apiClient(original); // request interceptor attaches the new token
   }

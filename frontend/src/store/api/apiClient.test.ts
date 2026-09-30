@@ -96,6 +96,22 @@ describe("apiClient", () => {
     expect(onExpired).toHaveBeenCalledTimes(1);
   });
 
+  it("retries without refreshing again when another request already refreshed", async () => {
+    // A request sent with the old token whose 401 arrives after the refresh finished
+    serve((config) => {
+      if (authOf(config) === "Bearer stale") {
+        useAuthStore.setState({ user: userWith("fresh") }); // refresh completed meanwhile
+        return { status: 401 };
+      }
+      return tokenCheckingServer(config);
+    });
+
+    const res = await apiClient.get("/api/message");
+
+    expect(res.data).toBe("ok");
+    expect(refreshCalls()).toBe(0);
+  });
+
   it("does not refresh when login itself answers 401", async () => {
     serve(() => ({ status: 401 }));
 

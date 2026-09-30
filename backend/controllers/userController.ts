@@ -1,7 +1,19 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import User from "../models/userModel";
-import generateToken from "../config/generateToken";
+import User, { IUser } from "../models/userModel";
+import { issueSession } from "../services/tokenService";
+
+/** Starts a session (refresh cookie) and responds with the user + access token. */
+export const sendAuthResponse = async (res: Response, user: IUser, status = 200): Promise<void> => {
+  const token = await issueSession(res, user);
+  res.status(status).json({
+    _id: user._id,
+    name: user.name,
+    email: user.email,
+    picture: user.picture,
+    token,
+  });
+};
 
 export const registerUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { name, email, password, picture } = req.body;
@@ -21,13 +33,7 @@ export const registerUser = asyncHandler(async (req: Request, res: Response): Pr
     picture,
   });
   if (user) {
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      picture: user.picture,
-      token: generateToken(user._id),
-    });
+    await sendAuthResponse(res, user, 201);
   } else {
     res.status(400);
     throw new Error("Failed to create new User");
@@ -40,13 +46,7 @@ export const authUser = asyncHandler(async (req: Request, res: Response): Promis
   const user = await User.findOne({ email });
 
   if (user && (await user.matchPassword(password))) {
-    res.json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      picture: user.picture,
-      token: generateToken(user._id),
-    });
+    await sendAuthResponse(res, user);
   } else {
     res.status(400);
     throw new Error("Invalid Email or Password");

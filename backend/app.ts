@@ -1,16 +1,20 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import path from "path";
 import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import messageRoutes from "./routes/messageRoutes";
 import notificationRoutes from "./routes/notificationRoutes";
 import { notFound, errorHandler } from "./Middleware/errorMiddleware";
+import { allowedOrigins } from "./config/cors";
 
 const app = express();
 
-app.use(cors());
+// Credentialed CORS (refresh cookie) — only for known frontend origins, never "*"
+app.use(cors({ origin: allowedOrigins(), credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);

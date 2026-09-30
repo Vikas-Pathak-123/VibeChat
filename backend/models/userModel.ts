@@ -7,6 +7,7 @@ export interface IUser extends Document {
   email: string;
   password: string;
   picture: string;
+  muteNotifications: boolean;
   createdAt: Date;
   updatedAt: Date;
   matchPassword: (enteredPassword: string) => Promise<boolean>;
@@ -22,6 +23,7 @@ const userSchema = new mongoose.Schema<IUser>(
       default:
         "https://icon-library.com/images/anonymous-avatar-icon/anonymous-avatar-icon-25.jpg",
     },
+    muteNotifications: { type: Boolean, default: false },
   },
   {
     timestamps: true,

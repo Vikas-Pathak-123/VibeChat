@@ -22,4 +22,8 @@ export const queryKeys = {
     search: (query: string) => ["users", "search", query] as const,
     profile: (id: string)   => ["users", id]              as const,
   },
+  notifications: {
+    list:        () => ["notifications", "list"]        as const,
+    preferences: () => ["notifications", "preferences"] as const,
+  },
 } as const;

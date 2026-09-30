@@ -16,3 +16,4 @@ export { default as apiClient } from "./api/apiClient";
 export * from "./api/userApi";
 export * from "./api/chatApi";
 export * from "./api/messageApi";
+export * from "./api/notificationApi";

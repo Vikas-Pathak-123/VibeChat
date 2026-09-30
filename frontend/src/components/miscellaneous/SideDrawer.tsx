@@ -16,21 +16,22 @@ import { useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import ChatLoading from "../shared/ChatLoading";
 import ProfileModal from "./ProfileModal";
-import { getSender } from "../../config/ChatLogics";
 import UserListItem from "../userAvatar/UserListItem";
 import ThemeToggle from "../shared/ThemeToggle";
-import { User } from "../../types";
+import { AppNotification, User } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useSocketStore } from "../../store/socketStore";
 import { searchUsers, accessOrCreateChat, queryClient, queryKeys } from "../../store";
+import { useNotificationsQuery, useMarkNotificationRead, useMarkAllNotificationsRead } from "../../hooks/useNotifications";
 
 /**
  * SideDrawer — Top navigation bar + search drawer + logout dialog.
  *
  * State management:
  * - Auth user: useAuthStore (Zustand)
- * - Notifications / selectedChat: useChatStore (Zustand)
+ * - selectedChat: useChatStore (Zustand)
+ * - Notifications: useNotificationsQuery + mark-read mutations (TanStack Query, DB-backed)
  * - User search: useMutation with searchUsers (TanStack Query — treated as
  *   mutation because it is triggered on demand, not on mount)
  * - Access chat: useMutation with accessOrCreateChat + cache invalidation
@@ -43,8 +44,10 @@ const SideDrawer: React.FC = () => {
   const [searchResult, setSearchResult] = useState<User[]>([]);
 
   const { user, logout }                        = useAuthStore();
-  const { notifications,
-          setSelectedChat, clearNotification }  = useChatStore();
+  const { setSelectedChat }                     = useChatStore();
+  const { data: notifications = [] }            = useNotificationsQuery();
+  const { mutate: markRead }                    = useMarkNotificationRead();
+  const { mutate: markAllRead }                 = useMarkAllNotificationsRead();
   const { disconnect }                          = useSocketStore();
   const toast                                   = useToast();
   const navigate                                = useNavigate();
@@ -85,6 +88,7 @@ const SideDrawer: React.FC = () => {
   const logoutHandler = (): void => {
     disconnect();  // close Socket.IO cleanly
     logout();      // clear Zustand + localStorage
+    queryClient.clear(); // drop the previous user's cached chats/notifications
     navigate("/");
   };
 
@@ -128,24 +132,32 @@ const SideDrawer: React.FC = () => {
               {notifications.length > 0 && (
                 <Badge position="absolute" top="-1" right="-1"
                   colorScheme="red" borderRadius="full" fontSize="9px"
-                  w="16px" h="16px" display="flex" alignItems="center" justifyContent="center">
-                  {notifications.length}
+                  minW="16px" h="16px" px="3px" display="flex" alignItems="center" justifyContent="center">
+                  {notifications.length > 9 ? "9+" : notifications.length}
                 </Badge>
               )}
             </MenuButton>
             <MenuList maxW="90vw">
               {!notifications.length && <MenuItem>🔔 No new messages</MenuItem>}
-              {notifications.map((notif) => (
+              {notifications.map((notif: AppNotification) => (
                 <MenuItem key={notif._id} whiteSpace="normal"
                   onClick={() => {
                     setSelectedChat(notif.chat);
-                    clearNotification(notif._id);
+                    markRead(notif._id);
                   }}>
                   {notif.chat.isGroupChat
                     ? `📢 New message in ${notif.chat.chatName}`
-                    : `💬 New message from ${getSender(user!, notif.chat.users)}`}
+                    : `💬 New message from ${notif.sender.name}`}
                 </MenuItem>
               ))}
+              {notifications.length > 0 && (
+                <>
+                  <MenuDivider />
+                  <MenuItem fontSize="sm" color="text-secondary" onClick={() => markAllRead()}>
+                    ✓ Mark all as read
+                  </MenuItem>
+                </>
+              )}
             </MenuList>
           </Menu>
 

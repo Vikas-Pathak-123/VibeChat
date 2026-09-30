@@ -13,7 +13,8 @@ import { useAuthStore } from "../store/authStore";
 import { useChatStore } from "../store/chatStore";
 import { useSocketStore } from "../store/socketStore";
 import { fetchMessages, sendMessage, reactToMessage, deleteMessage, queryKeys, queryClient } from "../store";
-import { Message } from "../types";
+import { AppNotification, Message } from "../types";
+import { useNotificationsQuery, useMarkChatNotificationsRead } from "../hooks/useNotifications";
 import ScrollableChat from "./ScrollableChat";
 import ProfileModal from "./miscellaneous/ProfileModal";
 import UpdateGroupChatModal from "./miscellaneous/UpdateGroupChatModal";
@@ -59,6 +60,17 @@ const SingleChat: React.FC<SingleChatProps> = ({ fetchAgain, setFetchAgain }) =>
   useEffect(() => {
     if (selectedChat) joinRoom(selectedChat._id);
   }, [selectedChat, joinRoom]);
+
+  // ── Opening a chat reads its notifications (also covers sidebar opens) ─────
+  const { data: notifications = [] } = useNotificationsQuery();
+  const { mutate: markChatRead }     = useMarkChatNotificationsRead();
+
+  useEffect(() => {
+    if (!selectedChat) return;
+    if (notifications.some((n: AppNotification) => n.chat._id === selectedChat._id)) {
+      markChatRead(selectedChat._id);
+    }
+  }, [selectedChat, notifications, markChatRead]);
 
   // ── Fetch messages ─────────────────────────────────────────────────────────
   const {

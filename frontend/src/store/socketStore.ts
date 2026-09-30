@@ -7,6 +7,7 @@ import { queryClient } from "./queryClient";
 import { queryKeys } from "./keys/queryKeys";
 import { useChatStore } from "./chatStore";
 import { useAuthStore } from "./authStore";
+import { markChatNotificationsRead } from "./api/notificationApi";
 
 /**
  * Socket Store — Zustand
@@ -18,7 +19,8 @@ import { useAuthStore } from "./authStore";
  *
  * Incoming socket events update:
  * - TanStack Query cache (new message → invalidate messages query)
- * - Zustand chatStore (notifications, typing indicators)
+ * - Zustand chatStore (typing indicators)
+ * - Notifications query (refetch; mark read when the chat is open)
  *
  * This replaces the previous socketRef inside SingleChat.tsx.
  * The socket NO LONGER reconnects on every chat switch.
@@ -61,16 +63,21 @@ export const useSocketStore = create<SocketState>()(
 
         // ── Incoming message ─────────────────────────────────────────────────
         socket.on("message recieved", (newMessage: Message) => {
-          const { selectedChat, addNotification } = useChatStore.getState();
+          const { selectedChat } = useChatStore.getState();
+          const notificationsKey = queryKeys.notifications.list();
 
           if (selectedChat?._id === newMessage.chat._id) {
             // Active chat → invalidate TanStack Query cache so messages refetch
             queryClient.invalidateQueries({
               queryKey: queryKeys.messages.list(newMessage.chat._id),
             });
+            // The server persisted a notification; the user is looking at this chat
+            markChatNotificationsRead(newMessage.chat._id)
+              .catch(() => undefined)
+              .finally(() => queryClient.invalidateQueries({ queryKey: notificationsKey }));
           } else {
-            // Background chat → add to notification badge
-            addNotification(newMessage);
+            // Background chat → refetch the persisted notifications for the bell
+            queryClient.invalidateQueries({ queryKey: notificationsKey });
           }
 
           // Always invalidate chat list so latest message preview updates

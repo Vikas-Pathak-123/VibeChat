@@ -19,7 +19,13 @@ export const getNotifications = asyncHandler(async (req: Request, res: Response)
     .sort({ createdAt: -1, _id: -1 })
     .limit(NOTIFICATION_LIMIT)
     .populate("sender", "name picture email")
-    .populate({ path: "chat", populate: { path: "users", select: "name picture email" } })
+    .populate({
+      path: "chat",
+      populate: [
+        { path: "users", select: "name picture email" },
+        { path: "groupAdmin", select: "name picture email" },
+      ],
+    })
     .populate("message", "content messageType isDeleted");
 
   // Drop rows whose chat or sender no longer resolves — the client can't render them

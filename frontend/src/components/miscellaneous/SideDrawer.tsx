@@ -21,9 +21,8 @@ import ThemeToggle from "../shared/ThemeToggle";
 import { AppNotification, User } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
-import { useSocketStore } from "../../store/socketStore";
 import { searchUsers, accessOrCreateChat, queryClient, queryKeys } from "../../store";
-import { clearSessionState } from "../../store/session";
+import { logoutSession } from "../../store/session";
 import { useNotificationsQuery, useMarkNotificationRead, useMarkAllNotificationsRead } from "../../hooks/useNotifications";
 
 /**
@@ -36,7 +35,7 @@ import { useNotificationsQuery, useMarkNotificationRead, useMarkAllNotifications
  * - User search: useMutation with searchUsers (TanStack Query — treated as
  *   mutation because it is triggered on demand, not on mount)
  * - Access chat: useMutation with accessOrCreateChat + cache invalidation
- * - Logout: useAuthStore.logout() + useSocketStore.disconnect()
+ * - Logout: logoutSession() — revokes the refresh cookie, disconnects the socket, clears state
  *
  * No useChatState. No direct axios.
  */
@@ -44,12 +43,11 @@ const SideDrawer: React.FC = () => {
   const [search, setSearch]             = useState<string>("");
   const [searchResult, setSearchResult] = useState<User[]>([]);
 
-  const { user, logout }                        = useAuthStore();
+  const { user }                                = useAuthStore();
   const { setSelectedChat }                     = useChatStore();
   const { data: notifications = [] }            = useNotificationsQuery();
   const { mutate: markRead }                    = useMarkNotificationRead();
   const { mutate: markAllRead }                 = useMarkAllNotificationsRead();
-  const { disconnect }                          = useSocketStore();
   const toast                                   = useToast();
   const navigate                                = useNavigate();
 
@@ -86,10 +84,8 @@ const SideDrawer: React.FC = () => {
     doSearch(search);
   };
 
-  const logoutHandler = (): void => {
-    disconnect();  // close Socket.IO cleanly
-    logout();      // clear Zustand + localStorage
-    clearSessionState(); // drop the previous user's open chat + cached server state
+  const logoutHandler = async (): Promise<void> => {
+    await logoutSession(); // revoke refresh cookie, close socket, drop user + cached state
     navigate("/");
   };
 

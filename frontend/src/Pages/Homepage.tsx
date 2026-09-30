@@ -20,7 +20,7 @@ const Homepage: React.FC = () => {
   const { user, isAuthLoading } = useAuthStore();
 
   useEffect(() => {
-    // Wait for Zustand persist rehydration before checking
+    // Wait for the session restore before checking
     if (!isAuthLoading && user) navigate("/chats");
   }, [user, isAuthLoading, navigate]);
 

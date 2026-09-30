@@ -5,7 +5,9 @@ import {
   endSession,
   logoutSession,
   completeGoogleLogin,
+  startGoogleLogin,
 } from "./session";
+import { API_BASE_URL } from "../constants/api.constants";
 import { useChatStore } from "./chatStore";
 import { useAuthStore } from "./authStore";
 import { useSocketStore } from "./socketStore";
@@ -127,14 +129,42 @@ describe("logoutSession", () => {
   });
 });
 
-describe("completeGoogleLogin", () => {
-  it("exchanges the one-time code and signs the user in", async () => {
-    (exchangeGoogleCode as jest.Mock).mockResolvedValue(alice);
+describe("Google sign-in binding", () => {
+  it("starts the flow with a fresh nonce remembered by this browser", () => {
+    const first = new URL(startGoogleLogin());
+    const second = new URL(startGoogleLogin());
 
-    const user = await completeGoogleLogin("one-time-code");
+    expect(first.origin + first.pathname).toBe(`${API_BASE_URL}/api/user/auth/google`);
+    const nonce = second.searchParams.get("nonce")!;
+    expect(nonce).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
+    expect(nonce).not.toBe(first.searchParams.get("nonce"));
+  });
+
+  it("exchanges the one-time code for the flow this browser started", async () => {
+    (exchangeGoogleCode as jest.Mock).mockResolvedValue(alice);
+    const nonce = new URL(startGoogleLogin()).searchParams.get("nonce")!;
+
+    const user = await completeGoogleLogin("one-time-code", nonce);
 
     expect(exchangeGoogleCode).toHaveBeenCalledWith("one-time-code");
     expect(user).toEqual(alice);
     expect(useAuthStore.getState().user).toEqual(alice);
+  });
+
+  it("refuses a code from a flow this browser did not start (login CSRF)", async () => {
+    startGoogleLogin();
+
+    await expect(completeGoogleLogin("attacker-code", "attacker-nonce-0123456")).rejects.toThrow();
+    expect(exchangeGoogleCode).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().user).toBeNull();
+  });
+
+  it("uses each nonce once", async () => {
+    (exchangeGoogleCode as jest.Mock).mockResolvedValue(alice);
+    const nonce = new URL(startGoogleLogin()).searchParams.get("nonce")!;
+    await completeGoogleLogin("code-1", nonce);
+
+    await expect(completeGoogleLogin("code-2", nonce)).rejects.toThrow();
+    expect(exchangeGoogleCode).toHaveBeenCalledTimes(1);
   });
 });

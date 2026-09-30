@@ -5,9 +5,12 @@ import { useSocketStore } from "./socketStore";
 import { refreshSession, setSessionExpiredHandler } from "./api/apiClient";
 import { logoutUser, exchangeGoogleCode } from "./api/userApi";
 import { User } from "../types";
+import { API_BASE_URL } from "../constants/api.constants";
 
 // Where the pre-VIB-24 auth store persisted the 30-day token
 const LEGACY_AUTH_KEY = "vibe-auth";
+// Nonce of the Google sign-in this browser started (login-CSRF binding)
+const GOOGLE_NONCE_KEY = "vibe-oauth-nonce";
 
 /**
  * Clears per-user client state on logout so the next user on the same tab
@@ -55,8 +58,34 @@ export const logoutSession = async (): Promise<void> => {
   endSession();
 };
 
-/** Finishes "Continue with Google": trade the one-time code for a session. */
-export const completeGoogleLogin = async (code: string): Promise<User> => {
+const randomNonce = (): string => {
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return btoa(String.fromCharCode(...Array.from(bytes)))
+    .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};
+
+/**
+ * Starts "Continue with Google": remembers a fresh nonce and returns the URL to
+ * navigate to. The API echoes the nonce back with the one-time code.
+ */
+export const startGoogleLogin = (): string => {
+  const nonce = randomNonce();
+  localStorage.setItem(GOOGLE_NONCE_KEY, nonce);
+  return `${API_BASE_URL}/api/user/auth/google?nonce=${nonce}`;
+};
+
+/**
+ * Finishes "Continue with Google": trade the one-time code for a session —
+ * but only for a flow this browser started, so nobody can sign a victim into
+ * the attacker's account by sending them a code link (login CSRF).
+ */
+export const completeGoogleLogin = async (code: string, nonce: string | null): Promise<User> => {
+  const expected = localStorage.getItem(GOOGLE_NONCE_KEY);
+  localStorage.removeItem(GOOGLE_NONCE_KEY);
+  if (!expected || nonce !== expected) {
+    throw new Error("This Google sign-in was not started in this browser");
+  }
+
   const user = await exchangeGoogleCode(code);
   useAuthStore.getState().setUser(user);
   return user;

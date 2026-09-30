@@ -6,7 +6,7 @@ import {
   createOAuthCode,
   consumeOAuthCode,
 } from "../services/googleAuthService";
-import { createUser } from "./helpers";
+import { createUser, tokenFor } from "./helpers";
 
 const googleProfile = {
   googleId: "google-123",
@@ -20,7 +20,7 @@ describe("findOrCreateGoogleUser", () => {
   it("creates a new user with the Google id, photo and an unusable password", async () => {
     const user = await findOrCreateGoogleUser(googleProfile);
 
-    const stored = await User.findById(user._id);
+    const stored = await User.findById(user._id).select("+googleId");
     expect(stored!.googleId).toBe("google-123");
     expect(stored!.email).toBe("gina@gmail.com");
     expect(stored!.name).toBe("Gina");
@@ -43,16 +43,35 @@ describe("findOrCreateGoogleUser", () => {
     const user = await findOrCreateGoogleUser(googleProfile);
 
     expect(user._id.toString()).toBe(existing._id.toString());
-    expect((await User.findById(existing._id))!.googleId).toBe("google-123");
-    // email/password login keeps working
-    expect(await (await User.findById(existing._id))!.matchPassword("password123")).toBe(true);
+    expect((await User.findById(existing._id).select("+googleId"))!.googleId).toBe("google-123");
+  });
+
+  it("locks out whoever pre-registered the address when the verified owner links it", async () => {
+    // Registration never proves email ownership: the password (and any sessions)
+    // may belong to someone else, so linking resets both.
+    await createUser("gina@gmail.com", "Squatter");
+    const login = await request(app)
+      .post("/api/user/login")
+      .send({ email: "gina@gmail.com", password: "password123" });
+    const squatterCookie = ([] as string[])
+      .concat(login.headers["set-cookie"])
+      .find((c) => c.startsWith("vibe_rt="))!
+      .split(";")[0];
+
+    await findOrCreateGoogleUser(googleProfile);
+
+    const relogin = await request(app)
+      .post("/api/user/login")
+      .send({ email: "gina@gmail.com", password: "password123" });
+    expect(relogin.status).toBe(400);
+    expect((await request(app).post("/api/user/refresh").set("Cookie", squatterCookie)).status).toBe(401);
   });
 
   it("refuses to link an existing email account when the email is unverified", async () => {
     const existing = await createUser("gina@gmail.com", "Gina Email");
 
     await expect(findOrCreateGoogleUser({ ...googleProfile, emailVerified: false })).rejects.toThrow();
-    expect((await User.findById(existing._id))!.googleId).toBeUndefined();
+    expect((await User.findById(existing._id).select("+googleId"))!.googleId).toBeUndefined();
   });
 });
 
@@ -79,6 +98,24 @@ describe("one-time OAuth codes", () => {
 
     const plain = await User.findById(user._id).lean();
     expect(plain).not.toHaveProperty("oauthCode");
+  });
+});
+
+describe("user privacy", () => {
+  it("never exposes googleId or password hashes to other users", async () => {
+    const gina = await findOrCreateGoogleUser(googleProfile);
+    const alice = await createUser("alice@test.com", "Alice");
+    const auth = { Authorization: `Bearer ${tokenFor(alice)}` };
+
+    const search = await request(app).get("/api/user?search=gina").set(auth);
+    expect(search.status).toBe(200);
+    expect(search.body).toHaveLength(1);
+    expect(search.body[0]).not.toHaveProperty("googleId");
+    expect(search.body[0]).not.toHaveProperty("password");
+
+    const chat = await request(app).post("/api/chat").set(auth).send({ userId: gina._id });
+    expect(chat.status).toBe(200);
+    for (const u of chat.body.users) expect(u).not.toHaveProperty("googleId");
   });
 });
 

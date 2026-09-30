@@ -72,6 +72,6 @@ export const allUsers = asyncHandler(async (req: Request, res: Response): Promis
     throw new Error("Not authorized");
   }
 
-  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } });
+  const users = await User.find(keyword).find({ _id: { $ne: req.user._id } }).select("-password");
   res.send(users);
 });

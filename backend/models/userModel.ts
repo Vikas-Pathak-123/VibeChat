@@ -43,7 +43,7 @@ const userSchema = new mongoose.Schema<IUser>(
       default: [],
       select: false,
     },
-    googleId: { type: String, unique: true, sparse: true },
+    googleId: { type: String, unique: true, sparse: true, select: false },
     // One-time code handed to the frontend after the Google callback
     oauthCode: {
       type: new mongoose.Schema({ codeHash: String, expiresAt: Date }, { _id: false }),

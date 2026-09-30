@@ -31,13 +31,13 @@ Replace the single 30-day JWT (persisted in localStorage) with a short-lived acc
 | `POST /api/user/login`, `POST /api/user` (register) | As before, plus the refresh cookie; `token` is now the 15-minute access token |
 | `POST /api/user/refresh` | Rotation as above |
 | `POST /api/user/logout` | Removes the cookie's token from the user and clears the cookie. Always `200` (idempotent, works with an expired access token) |
-| `GET /api/user/auth/google` | Redirects to Google (`profile email`). If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are unset → redirect to `<client>/?authError=google_unavailable` |
-| `GET /api/user/auth/google/callback` | On success: create a one-time code (32 random bytes, SHA-256 stored on the user, 60 s TTL) and redirect to `<client>/?oauthCode=<code>`. On failure → `<client>/?authError=google_failed` |
+| `GET /api/user/auth/google?nonce=` | Redirects to Google (`profile email`) with a random OAuth `state`; `state` + the frontend's `nonce` are kept in the `vibe_oauth` cookie (httpOnly, `SameSite=Lax`, path `/api/user/auth/google`, 10 min). Missing/invalid nonce → `<client>/?authError=google_failed`. If `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` are unset → `<client>/?authError=google_unavailable` |
+| `GET /api/user/auth/google/callback` | Requires the `vibe_oauth` cookie and a matching `state` (else `google_failed`, Google is never asked). On success: create a one-time code (32 random bytes, SHA-256 stored on the user, 60 s TTL) and redirect to `<client>/?oauthCode=<code>&nonce=<nonce>`. On failure → `<client>/?authError=google_failed` |
 | `POST /api/user/auth/google/exchange` `{ code }` | Atomically consumes the code and issues a session exactly like login. Unknown / expired / reused → `401` |
 
 ### Google account linking (`services/googleAuthService.ts`)
 1. Existing user with that `googleId` → sign in.
-2. Else a user with the same email **and Google says the email is verified** → link (`googleId` set) and sign in.
+2. Else a user with the same email **and Google says the email is verified** → link (`googleId` set) and sign in. Registration never proved who owns that address, so linking also replaces the password with a random one and revokes all existing sessions (pre-account-takeover protection): the verified owner signs in with Google from then on.
 3. Else if the email is taken but unverified → fail (no silent takeover).
 4. Else create a user (name, email, Google photo, random unusable password).
 
@@ -53,7 +53,10 @@ Accepts only `type: "access"` tokens. Refresh tokens, legacy 30-day tokens (no `
 - **`authStore`**: no `persist`; the access token lives only in memory. `isAuthLoading` starts `true` until session restore finishes.
 - **`session.ts`**: `restoreSession()` (removes the legacy `vibe-auth` localStorage key, registers the session-expired handler, calls `refreshSession()`; failure → signed out), `endSession()` (disconnect socket, clear user, clear chat + query cache), `logoutSession()` (`POST /logout`, then `endSession()` even if the call fails), `completeGoogleLogin(code)`.
 - **App start:** `App` runs `restoreSession()` once. `Chatpage` redirects to `/` once auth has resolved with no user (session expired or logged out elsewhere).
-- **Homepage:** "Continue with Google" link to `${API_BASE_URL}/api/user/auth/google` below the tabs (both Login and Sign Up). Reads `?oauthCode` → `completeGoogleLogin` → `/chats`; reads `?authError` → error toast. Query params are stripped after reading.
+- **Homepage:** "Continue with Google" below the tabs (both Login and Sign Up). Clicking stores a fresh nonce in localStorage (`startGoogleLogin`) and navigates to `/api/user/auth/google?nonce=…`. On return, `?oauthCode&nonce` → `completeGoogleLogin(code, nonce)` exchanges only if the nonce matches the stored one (login-CSRF protection), then `/chats`; `?authError` → error toast. Query params are stripped after reading.
+
+### Privacy
+`googleId`, `refreshTokens` and `oauthCode` are `select: false`; user search also excludes `password`.
 
 ## Out of scope / known limits
 

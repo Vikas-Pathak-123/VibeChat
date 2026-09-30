@@ -8,7 +8,7 @@ import Login from "../components/Authentication/Login";
 import Signup from "../components/Authentication/Signup";
 import ThemeToggle from "../components/shared/ThemeToggle";
 import { useAuthStore } from "../store/authStore";
-import { completeGoogleLogin } from "../store/session";
+import { completeGoogleLogin, startGoogleLogin } from "../store/session";
 import { API_BASE_URL } from "../constants/api.constants";
 
 const GOOGLE_AUTH_URL = `${API_BASE_URL}/api/user/auth/google`;
@@ -35,8 +35,9 @@ const GoogleLogo: React.FC = () => (
  * Reads auth state from Zustand authStore (not localStorage directly).
  * Redirects to /chats if user is already logged in.
  *
- * Google sign-in returns here with either `?oauthCode=` (a one-time code that
- * is exchanged for a session) or `?authError=`; both are stripped from the URL.
+ * Google sign-in returns here with either `?oauthCode=&nonce=` (a one-time code
+ * that is exchanged for a session if this browser started the flow) or
+ * `?authError=`; both are stripped from the URL.
  */
 const Homepage: React.FC = () => {
   const navigate            = useNavigate();
@@ -48,6 +49,7 @@ const Homepage: React.FC = () => {
 
   useEffect(() => {
     const code      = searchParams.get("oauthCode");
+    const nonce     = searchParams.get("nonce");
     const authError = searchParams.get("authError");
     if (!code && !authError) return;
     setSearchParams({}, { replace: true });
@@ -65,7 +67,7 @@ const Homepage: React.FC = () => {
     if (exchangedOAuthCode.current) return;
     exchangedOAuthCode.current = true;
     // On success the user is set and the effect below moves on to /chats
-    completeGoogleLogin(code as string).catch(() =>
+    completeGoogleLogin(code as string, nonce).catch(() =>
       showError("Google sign-in expired — please try again")
     );
   }, [searchParams, setSearchParams, toast]);
@@ -121,6 +123,10 @@ const Homepage: React.FC = () => {
 
           <Button
             as="a" href={GOOGLE_AUTH_URL}
+            onClick={(e: React.MouseEvent) => {
+              e.preventDefault();
+              window.location.assign(startGoogleLogin());
+            }}
             w="100%" size="lg" mt={2}
             leftIcon={<GoogleLogo />}
             bg="bg-elevated" color="text-primary"

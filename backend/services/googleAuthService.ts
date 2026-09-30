@@ -17,7 +17,9 @@ const OAUTH_CODE_TTL_MS = 60 * 1000;
  * 1. an account already linked to this Google id;
  * 2. an email/password account with the same email — linked only when Google
  *    has verified the email, so nobody can take over an account by claiming
- *    its address;
+ *    its address. Registration never proved who owns that address, so linking
+ *    also replaces the password and revokes existing sessions: whoever may have
+ *    pre-registered it loses access, and the owner signs in with Google;
  * 3. otherwise a new account with a random (unusable) password.
  */
 export const findOrCreateGoogleUser = async (profile: GoogleProfileInput): Promise<IUser> => {
@@ -31,7 +33,9 @@ export const findOrCreateGoogleUser = async (profile: GoogleProfileInput): Promi
       throw new Error("Google email is not verified; cannot link it to an existing account");
     }
     existing.googleId = profile.googleId;
+    existing.password = crypto.randomBytes(32).toString("hex");
     await existing.save();
+    await User.updateOne({ _id: existing._id }, { $set: { refreshTokens: [] } });
     return existing;
   }
 

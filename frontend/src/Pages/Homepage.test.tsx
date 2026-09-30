@@ -1,13 +1,13 @@
 import React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { ChakraProvider } from "@chakra-ui/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Homepage from "./Homepage";
-import { completeGoogleLogin } from "../store/session";
+import { completeGoogleLogin, startGoogleLogin } from "../store/session";
 import { API_BASE_URL } from "../constants/api.constants";
 
-jest.mock("../store/session", () => ({ completeGoogleLogin: jest.fn() }));
+jest.mock("../store/session", () => ({ completeGoogleLogin: jest.fn(), startGoogleLogin: jest.fn() }));
 
 const CurrentUrl = () => {
   const location = useLocation();
@@ -41,10 +41,19 @@ describe("Homepage Google sign-in", () => {
     expect(link).toHaveAttribute("href", `${API_BASE_URL}/api/user/auth/google`);
   });
 
-  it("exchanges the one-time code from the callback exactly once", async () => {
-    renderAt("/?oauthCode=abc");
+  it("starts the flow with a browser-bound nonce when clicked", () => {
+    (startGoogleLogin as jest.Mock).mockReturnValue("about:blank#google");
+    renderAt("/");
 
-    await waitFor(() => expect(completeGoogleLogin).toHaveBeenCalledWith("abc"));
+    fireEvent.click(screen.getByRole("link", { name: /continue with google/i }));
+
+    expect(startGoogleLogin).toHaveBeenCalledTimes(1);
+  });
+
+  it("exchanges the one-time code from the callback exactly once", async () => {
+    renderAt("/?oauthCode=abc&nonce=n1");
+
+    await waitFor(() => expect(completeGoogleLogin).toHaveBeenCalledWith("abc", "n1"));
     expect(completeGoogleLogin).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(screen.getByTestId("url")).toHaveTextContent(/^\/$/));
   });
@@ -58,7 +67,7 @@ describe("Homepage Google sign-in", () => {
 
   it("reports an expired or reused code", async () => {
     (completeGoogleLogin as jest.Mock).mockRejectedValue(new Error("401"));
-    renderAt("/?oauthCode=used");
+    renderAt("/?oauthCode=used&nonce=n1");
 
     expect(await screen.findByText(/google sign-in expired/i)).toBeInTheDocument();
   });

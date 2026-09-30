@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import Chat from "../models/chatModel";
 import User from "../models/userModel";
 import Message from "../models/messageModel";
+import { createMessageNotifications } from "../services/notificationService";
 
 //@description     Get all Messages
 //@route           GET /api/Message/:chatId
@@ -54,6 +55,15 @@ export const sendMessage = asyncHandler(async (req: Request, res: Response): Pro
     });
 
     await Chat.findByIdAndUpdate(req.body.chatId, { latestMessage: message });
+
+    // A notification failure must never fail the send itself
+    await createMessageNotifications({
+      messageId: message._id,
+      chatId,
+      senderId: req.user._id,
+    }).catch((err: Error) =>
+      console.error("[notifications] failed to create message notifications:", err.message)
+    );
 
     res.json(message);
   } catch (error: any) {

@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import Notification from "../models/notificationModel";
+import User from "../models/userModel";
 
 const NOTIFICATION_LIMIT = 50;
 
@@ -91,4 +92,35 @@ export const markChatNotificationsRead = asyncHandler(async (req: Request, res: 
     { isRead: true }
   );
   res.json({ modifiedCount: result.modifiedCount });
+});
+
+//@description     Get the logged-in user's notification preferences
+//@route           GET /api/notifications/preferences
+//@access          Protected
+export const getNotificationPreferences = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  res.json({ muteNotifications: req.user.muteNotifications === true });
+});
+
+//@description     Update the logged-in user's notification preferences
+//@route           PUT /api/notifications/preferences
+//@access          Protected
+export const updateNotificationPreferences = asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  if (!req.user) {
+    res.status(401);
+    throw new Error("Not authorized");
+  }
+
+  const { muteNotifications } = req.body;
+  if (typeof muteNotifications !== "boolean") {
+    res.status(400);
+    throw new Error("muteNotifications must be a boolean");
+  }
+
+  await User.findByIdAndUpdate(req.user._id, { muteNotifications });
+  res.json({ muteNotifications });
 });

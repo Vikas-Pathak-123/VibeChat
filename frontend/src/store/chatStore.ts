@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { Chat, Message } from "../types";
+import { Chat } from "../types";
 
 /**
  * Chat Store — Zustand
  *
  * Handles UI/client state for the chat experience:
  * - Which chat is currently selected (not server state — no API involved)
- * - Pending notification messages (received via Socket.IO, cleared on chat open)
+ * - (Notifications are server state since VIB-23 — see hooks/useNotifications.ts)
  * - Typing indicator state per chat room
  *
  * NOTE: The chat LIST itself is server state managed by TanStack Query
@@ -21,14 +21,10 @@ interface TypingState {
 
 interface ChatState {
   selectedChat: Chat | null;
-  notifications: Message[];
   typingChats: TypingState;
 
   // Actions
   setSelectedChat: (chat: Chat | null) => void;
-  addNotification: (message: Message) => void;
-  clearNotification: (messageId: string) => void;
-  clearAllNotifications: () => void;
   setTyping: (chatId: string, isTyping: boolean) => void;
 }
 
@@ -36,34 +32,10 @@ export const useChatStore = create<ChatState>()(
   devtools(
     (set) => ({
       selectedChat: null,
-      notifications: [],
       typingChats: {},
 
       setSelectedChat: (chat) =>
         set({ selectedChat: chat }, false, "chat/setSelectedChat"),
-
-      addNotification: (message) =>
-        set(
-          (state) => ({
-            notifications: state.notifications.some((n) => n._id === message._id)
-              ? state.notifications
-              : [message, ...state.notifications],
-          }),
-          false,
-          "chat/addNotification"
-        ),
-
-      clearNotification: (messageId) =>
-        set(
-          (state) => ({
-            notifications: state.notifications.filter((n) => n._id !== messageId),
-          }),
-          false,
-          "chat/clearNotification"
-        ),
-
-      clearAllNotifications: () =>
-        set({ notifications: [] }, false, "chat/clearAllNotifications"),
 
       setTyping: (chatId, isTyping) =>
         set(

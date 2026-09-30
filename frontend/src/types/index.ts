@@ -6,3 +6,4 @@
 export type { User } from "./user.types";
 export type { Chat } from "./chat.types";
 export type { Message, Reaction } from "./message.types";
+export type { AppNotification, NotificationPreferences } from "./notification.types";

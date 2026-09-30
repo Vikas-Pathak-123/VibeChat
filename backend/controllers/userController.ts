@@ -3,16 +3,19 @@ import asyncHandler from "express-async-handler";
 import User, { IUser } from "../models/userModel";
 import { issueSession } from "../services/tokenService";
 
+/** The public user fields plus the access token — the body of every auth response. */
+export const authBody = (user: IUser, token: string) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  picture: user.picture,
+  token,
+});
+
 /** Starts a session (refresh cookie) and responds with the user + access token. */
 export const sendAuthResponse = async (res: Response, user: IUser, status = 200): Promise<void> => {
   const token = await issueSession(res, user);
-  res.status(status).json({
-    _id: user._id,
-    name: user.name,
-    email: user.email,
-    picture: user.picture,
-    token,
-  });
+  res.status(status).json(authBody(user, token));
 };
 
 export const registerUser = asyncHandler(async (req: Request, res: Response): Promise<void> => {

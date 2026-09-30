@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { CookieOptions, Response } from "express";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 import User, { IUser } from "../models/userModel";
 
 /**
@@ -91,4 +92,48 @@ export const issueSession = async (res: Response, user: IUser): Promise<string> 
   await storeRefreshToken(user._id, refreshToken);
   res.cookie(REFRESH_COOKIE, refreshToken, { ...cookieOptions(), maxAge: REFRESH_TOKEN_TTL_MS });
   return generateAccessToken(user._id);
+};
+
+const verifyRefreshToken = (token: string): { id: string } | null => {
+  try {
+    const payload = jwt.verify(token, refreshSecret()) as jwt.JwtPayload;
+    if (payload.type !== "refresh" || !mongoose.isValidObjectId(payload.id)) return null;
+    return { id: payload.id };
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Exchanges a live refresh token for a new session (rotation).
+ * The presented token is cut down to the grace window rather than deleted,
+ * so a concurrent refresh from another tab with the same cookie still works.
+ * Returns null when the token is invalid, expired, revoked or never issued.
+ */
+export const rotateSession = async (
+  res: Response,
+  raw: string
+): Promise<{ user: IUser; token: string } | null> => {
+  const claims = verifyRefreshToken(raw);
+  if (!claims) return null;
+
+  const now = new Date();
+  const user = await User.findOneAndUpdate(
+    {
+      _id: claims.id,
+      refreshTokens: { $elemMatch: { tokenHash: hashToken(raw), expiresAt: { $gt: now } } },
+    },
+    { $min: { "refreshTokens.$.expiresAt": new Date(now.getTime() + ROTATION_GRACE_MS) } },
+    { new: true }
+  );
+  if (!user) return null;
+
+  const token = await issueSession(res, user);
+  return { user, token };
+};
+
+/** Revokes the session a refresh token belongs to (no-op if unknown). */
+export const revokeSession = async (raw: string): Promise<void> => {
+  const tokenHash = hashToken(raw);
+  await User.updateOne({ "refreshTokens.tokenHash": tokenHash }, { $pull: { refreshTokens: { tokenHash } } });
 };

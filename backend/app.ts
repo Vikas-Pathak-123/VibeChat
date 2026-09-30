@@ -4,6 +4,7 @@ import path from "path";
 import userRoutes from "./routes/userRoutes";
 import chatRoutes from "./routes/chatRoutes";
 import messageRoutes from "./routes/messageRoutes";
+import notificationRoutes from "./routes/notificationRoutes";
 import { notFound, errorHandler } from "./Middleware/errorMiddleware";
 
 const app = express();
@@ -14,6 +15,7 @@ app.use(express.json());
 app.use("/api/user", userRoutes);
 app.use("/api/chat", chatRoutes);
 app.use("/api/message", messageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // --------------------------deployment------------------------------
 

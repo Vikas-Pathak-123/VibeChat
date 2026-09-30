@@ -23,6 +23,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useChatStore } from "../../store/chatStore";
 import { useSocketStore } from "../../store/socketStore";
 import { searchUsers, accessOrCreateChat, queryClient, queryKeys } from "../../store";
+import { clearSessionState } from "../../store/session";
 import { useNotificationsQuery, useMarkNotificationRead, useMarkAllNotificationsRead } from "../../hooks/useNotifications";
 
 /**
@@ -88,7 +89,7 @@ const SideDrawer: React.FC = () => {
   const logoutHandler = (): void => {
     disconnect();  // close Socket.IO cleanly
     logout();      // clear Zustand + localStorage
-    queryClient.clear(); // drop the previous user's cached chats/notifications
+    clearSessionState(); // drop the previous user's open chat + cached server state
     navigate("/");
   };
 

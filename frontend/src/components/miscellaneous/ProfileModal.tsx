@@ -2,12 +2,13 @@ import { ViewIcon, EditIcon, EmailIcon } from "@chakra-ui/icons";
 import {
   Modal, ModalOverlay, ModalContent, ModalBody, ModalCloseButton,
   Button, useDisclosure, IconButton, Text, Image, Box, Divider,
-  useToast, Input, VStack, HStack, Tooltip,
+  useToast, Input, VStack, HStack, Tooltip, Switch, FormControl, FormLabel,
 } from "@chakra-ui/react";
 import { useState, useRef } from "react";
 import { User } from "../../types";
 import { useAuthStore } from "../../store/authStore";
 import { useUpdateProfileMutation } from "../../hooks/useAuthMutations";
+import { useNotificationPreferences, useUpdateNotificationPreferences } from "../../hooks/useNotifications";
 
 interface ProfileModalProps {
   user: User;
@@ -22,6 +23,7 @@ interface ProfileModalProps {
  * - Edit form state: local useState (ephemeral)
  * - Auth user: useAuthStore (Zustand)
  * - Save API call: useUpdateProfileMutation (TanStack Query mutation)
+ * - Notification mute: useNotificationPreferences / useUpdateNotificationPreferences (TanStack Query)
  *
  * No direct axios. No localStorage writes. No useChatState.
  */
@@ -38,6 +40,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, children }) => {
   const toast                         = useToast();
 
   const { mutate: updateProfile, isPending: saveLoading } = useUpdateProfileMutation();
+  const { data: notificationPrefs }                        = useNotificationPreferences(isOpen && isOwnProfile);
+  const { mutate: updatePrefs, isPending: prefsSaving }    = useUpdateNotificationPreferences();
 
   const handlePicUpload = (file: File | undefined): void => {
     if (!file) return;
@@ -163,6 +167,21 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ user, children }) => {
                 <EmailIcon />
                 <Text>{user.email}</Text>
               </HStack>
+
+              {/* Notification settings — own profile only */}
+              {isOwnProfile && (
+                <FormControl display="flex" alignItems="center" justifyContent="space-between">
+                  <FormLabel htmlFor="mute-notifications" mb={0} fontSize="sm" color="text-primary">
+                    🔕 Mute message notifications
+                  </FormLabel>
+                  <Switch
+                    id="mute-notifications" colorScheme="pink"
+                    isChecked={notificationPrefs?.muteNotifications ?? false}
+                    isDisabled={!notificationPrefs || prefsSaving}
+                    onChange={(e) => updatePrefs({ muteNotifications: e.target.checked })}
+                  />
+                </FormControl>
+              )}
 
               <Divider borderColor="border-subtle" />
 

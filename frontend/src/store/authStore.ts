@@ -1,19 +1,19 @@
 import { create } from "zustand";
-import { persist, devtools } from "zustand/middleware";
+import { devtools } from "zustand/middleware";
 import { User } from "../types";
 
 /**
  * Auth Store — Zustand
  *
  * Handles all client-side authentication state.
- * Persisted to localStorage via zustand/middleware `persist` so the user
- * stays logged in across page refreshes.
+ * Held in memory only: the access token is short-lived and never written to
+ * localStorage. After a page load the session is restored from the httpOnly
+ * refresh cookie (see `restoreSession` in store/session.ts).
  *
  * Rules:
- * - ONLY this store writes to/from localStorage for auth — no component
- *   should call localStorage.setItem("userInfo", ...) directly.
- * - `isAuthLoading` starts true and is set false once the persisted state
- *   has been rehydrated — prevents the blank-screen flash on refresh.
+ * - No component writes auth data to localStorage.
+ * - `isAuthLoading` starts true and is set false once the session restore has
+ *   finished — prevents the blank-screen flash and the premature redirect.
  */
 
 interface AuthState {
@@ -28,29 +28,19 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   devtools(
-    persist(
-      (set) => ({
-        user: null,
-        isAuthLoading: true,
+    (set) => ({
+      user: null,
+      isAuthLoading: true,
 
-        setUser: (user) => set({ user, isAuthLoading: false }, false, "auth/setUser"),
+      setUser: (user) => set({ user, isAuthLoading: false }, false, "auth/setUser"),
 
-        logout: () => {
-          set({ user: null, isAuthLoading: false }, false, "auth/logout");
-        },
+      logout: () => {
+        set({ user: null, isAuthLoading: false }, false, "auth/logout");
+      },
 
-        setAuthLoading: (loading) =>
-          set({ isAuthLoading: loading }, false, "auth/setAuthLoading"),
-      }),
-      {
-        name: "vibe-auth",           // localStorage key
-        partialize: (state) => ({ user: state.user }), // only persist user, not loading state
-        onRehydrateStorage: () => (state) => {
-          // Once rehydration is complete, mark auth as resolved
-          state?.setAuthLoading(false);
-        },
-      }
-    ),
+      setAuthLoading: (loading) =>
+        set({ isAuthLoading: loading }, false, "auth/setAuthLoading"),
+    }),
     { name: "AuthStore" }
   )
 );

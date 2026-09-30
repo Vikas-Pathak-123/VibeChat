@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, Spinner, Center } from "@chakra-ui/react";
+import { Navigate } from "react-router-dom";
 import Chatbox from "../components/Chatbox";
 import MyChats from "../components/MyChats";
 import SideDrawer from "../components/miscellaneous/SideDrawer";
@@ -10,10 +11,11 @@ import { useSocketStore } from "../store/socketStore";
  * Chatpage — Main chat layout.
  *
  * Reads auth state from Zustand authStore.
- * isAuthLoading: true until Zustand persist middleware rehydrates from localStorage.
- * Shows spinner during rehydration to prevent blank screen flash.
- * Connects Socket.IO for a rehydrated user — login connects it too, but a
- * page refresh restores the user from localStorage without logging in.
+ * isAuthLoading: true until the session has been restored from the refresh cookie.
+ * Shows spinner meanwhile to prevent blank screen flash; once resolved with no
+ * user (never logged in, logged out, or session expired) it redirects to "/".
+ * Connects Socket.IO for a restored user — login connects it too, but a
+ * page refresh restores the user without logging in.
  *
  * No useChatState. No ChatProvider dependency.
  */
@@ -33,6 +35,8 @@ const Chatpage: React.FC = () => {
       </Center>
     );
   }
+
+  if (!user) return <Navigate to="/" replace />;
 
   return (
     <Box minH="100vh" h="100vh" bg="bg-app" display="flex" flexDirection="column" overflow="hidden">

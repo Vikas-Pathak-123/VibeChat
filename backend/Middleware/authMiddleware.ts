@@ -1,40 +1,34 @@
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
 import User from "../models/userModel";
 import asyncHandler from "express-async-handler";
+import { verifyAccessToken } from "../services/tokenService";
 
+/**
+ * Requires a valid short-lived access token (Bearer). Refresh tokens, legacy
+ * tokens without a `type` claim, expired tokens and tokens of deleted users
+ * are all 401 — the client then refreshes via POST /api/user/refresh.
+ */
 export const protect = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
-  let token: string | undefined;
-
-  if (
-    req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
-  ) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-
-      const secret = process.env.JWT_SECRET;
-      if (!secret) {
-        throw new Error("JWT_SECRET is not defined");
-      }
-
-      // decodes token id
-      const decoded = jwt.verify(token, secret) as jwt.JwtPayload;
-
-      const user = await User.findById(decoded.id).select("-password");
-      if (user) {
-        req.user = user;
-      }
-
-      next();
-    } catch (error) {
-      res.status(401);
-      throw new Error("Not authorized, token failed");
-    }
-  }
-
-  if (!token) {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith("Bearer ")) {
     res.status(401);
     throw new Error("Not authorized, no token");
   }
+
+  let userId: string;
+  try {
+    userId = verifyAccessToken(header.split(" ")[1]).id;
+  } catch {
+    res.status(401);
+    throw new Error("Not authorized, token failed");
+  }
+
+  const user = await User.findById(userId).select("-password");
+  if (!user) {
+    res.status(401);
+    throw new Error("Not authorized, user not found");
+  }
+
+  req.user = user;
+  next();
 });

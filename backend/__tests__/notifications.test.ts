@@ -2,6 +2,7 @@ import request from "supertest";
 import mongoose from "mongoose";
 import app from "../app";
 import Notification from "../models/notificationModel";
+import Chat from "../models/chatModel";
 import { IUser } from "../models/userModel";
 import {
   createUser, tokenFor, createChatWith, createMessage, createNotification,
@@ -42,6 +43,20 @@ describe("GET /api/notifications", () => {
     expect(res.body[0].chat.users.map((u: any) => u.name).sort()).toEqual(["Alice", "Bob"]);
     expect(res.body[0].chat.users[0].password).toBeUndefined();
     expect(res.body[0].message.content).toBe("hello");
+  });
+
+  it("populates the group admin so opening a group from the bell keeps admin controls", async () => {
+    const alice = await createUser("alice@test.com", "Alice");
+    const bob = await createUser("bob@test.com", "Bob");
+    const group = await Chat.create({ chatName: "crew", isGroupChat: true, users: [alice._id, bob._id], groupAdmin: alice._id });
+    const msg = await createMessage({ sender: alice._id, chat: group._id });
+    await createNotification({ recipient: bob._id, sender: alice._id, chat: group._id, message: msg._id });
+
+    const res = await request(app).get("/api/notifications").set(auth(bob));
+
+    expect(res.body[0].chat.groupAdmin._id).toBe(alice._id.toString());
+    expect(res.body[0].chat.groupAdmin.name).toBe("Alice");
+    expect(res.body[0].chat.groupAdmin.password).toBeUndefined();
   });
 });
 

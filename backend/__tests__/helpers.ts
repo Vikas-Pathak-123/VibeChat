@@ -1,15 +1,15 @@
-import jwt from "jsonwebtoken";
 import User, { IUser } from "../models/userModel";
 import Chat, { IChat } from "../models/chatModel";
 import Message, { IMessage } from "../models/messageModel";
 import Notification, { INotification } from "../models/notificationModel";
+import { generateAccessToken } from "../services/tokenService";
 
 export const createUser = async (email: string, name = "Test User"): Promise<IUser> => {
   return User.create({ name, email, password: "password123" });
 };
 
 export const tokenFor = (user: IUser): string => {
-  return jwt.sign({ id: user._id }, process.env.JWT_SECRET as string, { expiresIn: "1d" });
+  return generateAccessToken(user._id);
 };
 
 export const createChatWith = async (userIds: (string | IUser["_id"])[]): Promise<IChat> => {

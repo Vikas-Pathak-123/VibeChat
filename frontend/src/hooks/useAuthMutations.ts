@@ -16,7 +16,8 @@ import {
  * useLoginMutation
  *
  * Wraps TanStack Query useMutation for login.
- * On success: sets user in Zustand authStore (which persists to localStorage),
+ * On success: sets user in Zustand authStore (in memory; the server set the
+ * httpOnly refresh cookie),
  * connects the Socket.IO socket, then navigates to /chats.
  */
 export const useLoginMutation = () => {
@@ -95,7 +96,7 @@ export const useRegisterMutation = () => {
  * useUpdateProfileMutation
  *
  * Wraps TanStack Query useMutation for profile update.
- * On success: merges updated fields into authStore (also re-persists to localStorage).
+ * On success: merges updated fields into authStore.
  */
 export const useUpdateProfileMutation = () => {
   const toast        = useToast();

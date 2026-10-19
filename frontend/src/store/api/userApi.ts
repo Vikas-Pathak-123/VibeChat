@@ -32,3 +32,14 @@ export const updateUserProfile = async (payload: UpdateProfilePayload): Promise<
   const { data } = await apiClient.put<User>("/api/user/profile", payload);
   return data;
 };
+
+/** Revokes this device's refresh cookie. */
+export const logoutUser = async (): Promise<void> => {
+  await apiClient.post("/api/user/logout");
+};
+
+/** Trades the one-time code from the Google callback for a session. */
+export const exchangeGoogleCode = async (code: string): Promise<User> => {
+  const { data } = await apiClient.post<User>("/api/user/auth/google/exchange", { code });
+  return data;
+};

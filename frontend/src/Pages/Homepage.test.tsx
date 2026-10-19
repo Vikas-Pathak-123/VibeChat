@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import Homepage from "./Homepage";
 import { completeGoogleLogin, startGoogleLogin } from "../store/session";
-import { API_BASE_URL } from "../constants/api.constants";
+import { API_ORIGIN } from "../constants/api.constants";
 
 jest.mock("../store/session", () => ({ completeGoogleLogin: jest.fn(), startGoogleLogin: jest.fn() }));
 
@@ -38,7 +38,7 @@ describe("Homepage Google sign-in", () => {
     renderAt("/");
 
     const link = screen.getByRole("link", { name: /continue with google/i });
-    expect(link).toHaveAttribute("href", `${API_BASE_URL}/api/user/auth/google`);
+    expect(link).toHaveAttribute("href", `${API_ORIGIN}/api/user/auth/google`);
   });
 
   it("starts the flow with a browser-bound nonce when clicked", () => {

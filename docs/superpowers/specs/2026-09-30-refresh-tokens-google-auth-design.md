@@ -58,9 +58,17 @@ Accepts only `type: "access"` tokens. Refresh tokens, legacy 30-day tokens (no `
 ### Privacy
 `googleId`, `refreshTokens` and `oauthCode` are `select: false`; user search also excludes `password`.
 
+## Same-site API (added after pre-merge testing)
+
+Testing with third-party cookies blocked (Safari / Brave / Chrome incognito default) showed the cross-site refresh cookie was dropped: sessions ended on reload and after 15 minutes. Testing the PR's Vercel preview (new frontend, old backend) also showed every credentialed call blocked by the old `*` CORS — a login outage for the minutes between the Vercel and Render deploys, and broken previews afterwards. Fix:
+
+- `frontend/vercel.json` rewrites `/api/*` to Render; `API_BASE_URL` is `""` (same site), so the refresh cookie is first-party on the Vercel domain and no CORS is involved. Locally the CRA dev-server `proxy` (port 4000) plays the same role.
+- `API_ORIGIN` (Render) is still used directly for the Google sign-in navigation (its `vibe_oauth` state cookie and the callback live on Render) and for Socket.IO (no cookies; Vercel cannot proxy WebSockets).
+- `restoreSession` retries the refresh on 5xx / network errors (e.g. a sleeping Render instance timing out behind the proxy); a 4xx still means "signed out".
+- The backend is unchanged: cookie attributes and the CORS allow-list stay as above and remain correct for any cross-site client.
+
 ## Out of scope / known limits
 
-- Safari (and Chrome incognito) block third-party cookies, so with the Vercel → Render split, their sessions will not survive a reload and will end when the first access token expires (≤ 15 min). Fix: serve the API same-site with the frontend (e.g. a Vercel rewrite of `/api/*` to Render and a relative `API_BASE_URL`), a deploy change to make separately.
 - Socket.IO stays unauthenticated (unchanged).
 - Revoking all sessions on refresh-token reuse, per-device session UI: backlog (VIB-8).
 

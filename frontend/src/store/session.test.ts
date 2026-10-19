@@ -7,7 +7,8 @@ import {
   completeGoogleLogin,
   startGoogleLogin,
 } from "./session";
-import { API_BASE_URL } from "../constants/api.constants";
+import { AxiosError, AxiosResponse } from "axios";
+import { API_ORIGIN } from "../constants/api.constants";
 import { useChatStore } from "./chatStore";
 import { useAuthStore } from "./authStore";
 import { useSocketStore } from "./socketStore";
@@ -24,6 +25,9 @@ jest.mock("./api/apiClient", () => ({
   setSessionExpiredHandler: jest.fn(),
 }));
 jest.mock("./api/userApi", () => ({ logoutUser: jest.fn(), exchangeGoogleCode: jest.fn() }));
+
+const httpError = (status: number) =>
+  new AxiosError("Request failed", "ERR_BAD_RESPONSE", undefined, undefined, { status } as AxiosResponse);
 
 const alice: User = { _id: "u1", name: "Alice", email: "a@test.com", picture: "", token: "t1" };
 
@@ -72,7 +76,7 @@ describe("restoreSession", () => {
   });
 
   it("resolves to signed out when there is no valid refresh cookie", async () => {
-    (refreshSession as jest.Mock).mockRejectedValue(new Error("401"));
+    (refreshSession as jest.Mock).mockRejectedValue(httpError(401));
 
     await restoreSession();
 
@@ -82,11 +86,41 @@ describe("restoreSession", () => {
 
   it("removes the legacy persisted token", async () => {
     localStorage.setItem("vibe-auth", JSON.stringify({ state: { user: { token: "old-30d-token" } } }));
-    (refreshSession as jest.Mock).mockRejectedValue(new Error("401"));
+    (refreshSession as jest.Mock).mockRejectedValue(httpError(401));
 
     await restoreSession();
 
     expect(localStorage.getItem("vibe-auth")).toBeNull();
+  });
+
+  it("retries while the API is waking up (5xx / network error), then signs in", async () => {
+    (refreshSession as jest.Mock)
+      .mockRejectedValueOnce(httpError(504))
+      .mockRejectedValueOnce(new Error("Network Error"))
+      .mockResolvedValueOnce(alice);
+
+    await restoreSession({ retryDelaysMs: [0, 0] });
+
+    expect(refreshSession).toHaveBeenCalledTimes(3);
+    expect(useAuthStore.getState().user).toEqual(alice);
+  });
+
+  it("does not retry when there is simply no session (401)", async () => {
+    (refreshSession as jest.Mock).mockRejectedValue(httpError(401));
+
+    await restoreSession({ retryDelaysMs: [0, 0] });
+
+    expect(refreshSession).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up and shows signed out when the API stays down", async () => {
+    (refreshSession as jest.Mock).mockRejectedValue(httpError(503));
+
+    await restoreSession({ retryDelaysMs: [0, 0] });
+
+    expect(refreshSession).toHaveBeenCalledTimes(3);
+    expect(useAuthStore.getState().user).toBeNull();
+    expect(useAuthStore.getState().isAuthLoading).toBe(false);
   });
 
   it("ends the session whenever the refresh token is later rejected", async () => {
@@ -134,7 +168,8 @@ describe("Google sign-in binding", () => {
     const first = new URL(startGoogleLogin());
     const second = new URL(startGoogleLogin());
 
-    expect(first.origin + first.pathname).toBe(`${API_BASE_URL}/api/user/auth/google`);
+    // A top-level navigation straight to the API server: its OAuth state cookie lives there
+    expect(first.origin + first.pathname).toBe(`${API_ORIGIN}/api/user/auth/google`);
     const nonce = second.searchParams.get("nonce")!;
     expect(nonce).toMatch(/^[A-Za-z0-9_-]{16,128}$/);
     expect(nonce).not.toBe(first.searchParams.get("nonce"));

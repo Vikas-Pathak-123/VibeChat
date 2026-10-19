@@ -142,6 +142,15 @@ JWT_SECRET=your_jwt_secret_key
 CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
 CLOUDINARY_API_KEY=your_cloudinary_api_key
 CLOUDINARY_API_SECRET=your_cloudinary_api_secret
+
+# Optional — Google sign-in (without these the Google button says it's unavailable)
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+# Optional — frontend origin(s) allowed to call the API with cookies, comma-separated
+# (defaults: http://localhost:3000 in development, https://vibe-chat.vercel.app in production)
+CLIENT_URL=http://localhost:3000
+# Optional — separate secret for refresh tokens (falls back to JWT_SECRET)
+REFRESH_TOKEN_SECRET=another_long_random_string
 ```
 
 Start the backend server:
@@ -166,7 +175,7 @@ npm install
 npm start
 ```
 
-The frontend will start at **http://localhost:3000**
+The frontend will start at **http://localhost:3000**. API calls go to `/api/...` on the same site and the dev server proxies them to the backend on port 4000 (`"proxy"` in `frontend/package.json`); Socket.IO and Google sign-in connect to `http://localhost:4000` directly. To point elsewhere, set `REACT_APP_API_URL` (API calls) and `REACT_APP_API_ORIGIN` (Socket.IO + Google).
 
 ---
 
@@ -186,8 +195,12 @@ npm run dev
 ### User Routes — `/api/user`
 | Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/user` | Register a new user |
-| `POST` | `/api/user/login` | Login user & get JWT |
+| `POST` | `/api/user` | Register a new user (sets the refresh cookie) |
+| `POST` | `/api/user/login` | Login: returns a 15-minute access token, sets a 30-day httpOnly refresh cookie |
+| `POST` | `/api/user/refresh` | New access token from the refresh cookie (rotates it) |
+| `POST` | `/api/user/logout` | Revoke this session's refresh cookie |
+| `GET` | `/api/user/auth/google` | Start Google sign-in |
+| `POST` | `/api/user/auth/google/exchange` | Trade the one-time Google code for a session |
 | `GET` | `/api/user?search=` | Search users by name/email |
 
 ### Chat Routes — `/api/chat`
@@ -228,14 +241,15 @@ npm run dev
 2. Connect the repo to [Vercel](https://vercel.com)
 3. Set build command: `npm run build`
 4. Set output directory: `build`
-5. Add environment variables in Vercel dashboard
+5. `frontend/vercel.json` rewrites `/api/*` to the Render backend, so API calls and the login cookie stay on the Vercel site (browsers that block third-party cookies, like Safari, keep the user logged in). No frontend environment variables are needed.
 
 ### Backend (Render)
 1. Connect the repo to [Render](https://render.com)
-2. Set build command: `npm install`
+2. Set build command: `npm install && npm run build:backend` (compiles the TypeScript backend to `backend/dist`, which `npm start` runs)
 3. Set start command: `npm start`
 4. Add all `.env` variables in the Render environment settings
 5. Set `NODE_ENV=production`
+6. For Google sign-in: add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`, and in Google Cloud Console add `https://<your-render-service>.onrender.com/api/user/auth/google/callback` as an authorized redirect URI
 
 ---
 

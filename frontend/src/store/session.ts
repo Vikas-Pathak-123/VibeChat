@@ -5,7 +5,8 @@ import { useSocketStore } from "./socketStore";
 import { refreshSession, setSessionExpiredHandler } from "./api/apiClient";
 import { logoutUser, exchangeGoogleCode } from "./api/userApi";
 import { User } from "../types";
-import { API_BASE_URL } from "../constants/api.constants";
+import { isAxiosError } from "axios";
+import { API_ORIGIN } from "../constants/api.constants";
 
 // Where the pre-VIB-24 auth store persisted the 30-day token
 const LEGACY_AUTH_KEY = "vibe-auth";
@@ -28,12 +29,23 @@ export const endSession = (): void => {
   clearSessionState();
 };
 
+// A server error or no response at all (e.g. a sleeping Render instance timing
+// out behind the Vercel proxy) is worth retrying; any 4xx means "no session"
+const isTransient = (error: unknown): boolean => {
+  const status = isAxiosError(error) ? error.response?.status : undefined;
+  return status === undefined || status >= 500;
+};
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 /**
  * Runs once on app start: restores the session from the httpOnly refresh
  * cookie (the access token is never persisted) and arranges for the session
  * to end whenever the refresh token is rejected later on.
  */
-export const restoreSession = async (): Promise<void> => {
+export const restoreSession = async (
+  { retryDelaysMs = [1000, 3000] }: { retryDelaysMs?: number[] } = {}
+): Promise<void> => {
   try {
     localStorage.removeItem(LEGACY_AUTH_KEY);
   } catch {
@@ -41,11 +53,16 @@ export const restoreSession = async (): Promise<void> => {
   }
   setSessionExpiredHandler(endSession);
 
-  try {
-    useAuthStore.getState().setUser(await refreshSession());
-  } catch {
-    useAuthStore.getState().setUser(null);
+  for (let attempt = 0; ; attempt++) {
+    try {
+      useAuthStore.getState().setUser(await refreshSession());
+      return;
+    } catch (error) {
+      if (attempt >= retryDelaysMs.length || !isTransient(error)) break;
+      await wait(retryDelaysMs[attempt]);
+    }
   }
+  useAuthStore.getState().setUser(null);
 };
 
 /** Logout: revoke the refresh cookie server-side, then sign out locally regardless. */
@@ -71,7 +88,7 @@ const randomNonce = (): string => {
 export const startGoogleLogin = (): string => {
   const nonce = randomNonce();
   localStorage.setItem(GOOGLE_NONCE_KEY, nonce);
-  return `${API_BASE_URL}/api/user/auth/google?nonce=${nonce}`;
+  return `${API_ORIGIN}/api/user/auth/google?nonce=${nonce}`;
 };
 
 /**

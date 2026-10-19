@@ -9,9 +9,9 @@ import Signup from "../components/Authentication/Signup";
 import ThemeToggle from "../components/shared/ThemeToggle";
 import { useAuthStore } from "../store/authStore";
 import { completeGoogleLogin, startGoogleLogin } from "../store/session";
-import { API_BASE_URL } from "../constants/api.constants";
+import { API_ORIGIN } from "../constants/api.constants";
 
-const GOOGLE_AUTH_URL = `${API_BASE_URL}/api/user/auth/google`;
+const GOOGLE_AUTH_URL = `${API_ORIGIN}/api/user/auth/google`;
 
 const GOOGLE_TOAST_ID = "google-sign-in";
 

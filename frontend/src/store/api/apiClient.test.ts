@@ -44,6 +44,10 @@ beforeEach(() => {
 });
 
 describe("apiClient", () => {
+  it("calls the API on the page's own site so Vercel's /api rewrite makes the cookie first-party", () => {
+    expect(apiClient.defaults.baseURL).toBe("");
+  });
+
   it("sends cookies with every request", () => {
     expect(apiClient.defaults.withCredentials).toBe(true);
   });
